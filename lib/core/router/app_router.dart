@@ -16,6 +16,12 @@ import '../../features/organization/presentation/designations_page.dart';
 import '../../features/organization/presentation/hierarchy_page.dart';
 import '../../features/employees/presentation/employees_page.dart';
 import '../../features/employees/presentation/employee_detail_page.dart';
+import '../../features/attendance/presentation/attendance_page.dart';
+import '../../features/leaves/presentation/leaves_page.dart';
+import '../../features/holidays/presentation/holidays_page.dart';
+import '../../features/admin_system/presentation/roles_permissions_page.dart';
+import '../../features/admin_system/presentation/system_settings_page.dart';
+import '../../features/admin_system/presentation/audit_logs_page.dart';
 
 const _publicRoutes = {'/login', '/forgot-password', '/reset-password'};
 
@@ -42,6 +48,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       final signedIn = auth.value != null;
       if (!signedIn) return _publicRoutes.contains(location) ? null : '/login';
 
+      final user = auth.value!;
+      // Super Admin: Hide and block attendance/leaves screens
+      if (user.isSuperAdmin && (location.startsWith('/attendance') || location.startsWith('/leaves'))) {
+        return '/home';
+      }
+      // Non-Super Admin: Block roles, system settings, and audit logs
+      if (!user.isSuperAdmin && (location.startsWith('/roles') || location.startsWith('/settings') || location.startsWith('/audit'))) {
+        return '/home';
+      }
+
       if (location == '/splash' || location == '/login' || location == '/forgot-password') return '/home';
       return null;
     },
@@ -60,6 +76,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(path: '/home', builder: (_, _) => const DashboardOverviewPage()),
+          GoRoute(path: '/attendance', builder: (_, _) => const AttendancePage()),
+          GoRoute(path: '/leaves', builder: (_, _) => const LeavesPage()),
+          GoRoute(path: '/holidays', builder: (_, _) => const HolidaysPage()),
           GoRoute(path: '/employees', builder: (_, _) => const EmployeesPage()),
           GoRoute(
             path: '/employees/:id',
@@ -72,6 +91,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/departments', builder: (_, _) => const DepartmentsPage()),
           GoRoute(path: '/designations', builder: (_, _) => const DesignationsPage()),
           GoRoute(path: '/company', builder: (_, _) => const CompanyPage()),
+          GoRoute(path: '/roles', builder: (_, _) => const RolesPermissionsPage()),
+          GoRoute(path: '/settings', builder: (_, _) => const SystemSettingsPage()),
+          GoRoute(path: '/audit', builder: (_, _) => const AuditLogsPage()),
           GoRoute(path: '/change-password', builder: (_, _) => const ChangePasswordPage()),
         ],
       ),

@@ -22,6 +22,9 @@ class ApiException implements Exception {
 
   /// The single best message to show the user: the first field error, else the server message.
   String get displayMessage {
+    if (isForbidden) {
+      return message.isNotEmpty ? message : "You don't have permission to perform this action.";
+    }
     for (final messages in errors.values) {
       if (messages.isNotEmpty) return messages.first;
     }
@@ -45,8 +48,11 @@ class ApiException implements Exception {
           }
         });
       }
+      final fallbackMessage = response.statusCode == 403
+          ? "You don't have permission to perform this action."
+          : 'Something went wrong.';
       return ApiException(
-        rawMessage is String && rawMessage.isNotEmpty ? rawMessage : 'Something went wrong.',
+        rawMessage is String && rawMessage.isNotEmpty ? rawMessage : fallbackMessage,
         statusCode: response.statusCode,
         errors: errors,
       );

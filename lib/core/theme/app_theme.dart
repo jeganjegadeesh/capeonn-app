@@ -43,8 +43,12 @@ class AppColors {
   // Role Badge Styling Helper
   static (Color bg, Color fg) rolePillColors(String? roleSlug) {
     switch (roleSlug?.toLowerCase()) {
+      case 'super_admin':
+        return (const Color(0xFFEDE9FE), const Color(0xFF5B21B6)); // Violet
       case 'admin':
         return (purpleContainer, const Color(0xFF6D28D9));
+      case 'hr':
+        return (const Color(0xFFCCFBF1), const Color(0xFF0F766E)); // Teal
       case 'manager':
         return (primaryContainer, primaryDark);
       case 'team_lead':

@@ -197,6 +197,47 @@ class DashboardOverviewPage extends ConsumerWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
+                    if (user.isSuperAdmin) ...[
+                      _ActionShortcut(
+                        icon: Icons.admin_panel_settings,
+                        label: 'Roles & Perms',
+                        description: 'Manage system roles & grants',
+                        onTap: () => context.go('/roles'),
+                      ),
+                      _ActionShortcut(
+                        icon: Icons.settings,
+                        label: 'System Settings',
+                        description: 'Global controls & policies',
+                        onTap: () => context.go('/settings'),
+                      ),
+                      _ActionShortcut(
+                        icon: Icons.history_edu,
+                        label: 'Audit Logs',
+                        description: 'Security & system history',
+                        onTap: () => context.go('/audit'),
+                      ),
+                    ],
+                    if (user.canAccessAttendance)
+                      _ActionShortcut(
+                        icon: Icons.access_time,
+                        label: 'Attendance',
+                        description: 'Check in / track presence',
+                        onTap: () => context.go('/attendance'),
+                      ),
+                    if (user.canAccessLeaves)
+                      _ActionShortcut(
+                        icon: Icons.event_note,
+                        label: user.isHR ? 'Leave Approvals' : 'Leaves',
+                        description: user.isHR ? 'Review employee leave queue' : 'Apply & track time off',
+                        onTap: () => context.go('/leaves'),
+                      ),
+                    if (user.canViewHolidays)
+                      _ActionShortcut(
+                        icon: Icons.calendar_today,
+                        label: 'Holiday Schedule',
+                        description: 'Company & public holidays',
+                        onTap: () => context.go('/holidays'),
+                      ),
                     if (user.canViewEmployees) ...[
                       _ActionShortcut(
                         icon: Icons.people,

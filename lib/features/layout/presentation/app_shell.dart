@@ -109,6 +109,19 @@ class AppShell extends ConsumerWidget {
       const _NavItem(title: 'Dashboard', icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, route: '/home'),
     ];
 
+    // Attendance & Leaves are strictly hidden for Super Admin
+    if (user.canAccessAttendance && (user.canViewAttendance || user.canRecordAttendance)) {
+      list.add(const _NavItem(title: 'Attendance', icon: Icons.access_time_outlined, activeIcon: Icons.access_time_filled, route: '/attendance'));
+    }
+
+    if (user.canAccessLeaves && (user.canViewLeaves || user.canApplyLeave)) {
+      list.add(const _NavItem(title: 'Leaves', icon: Icons.event_note_outlined, activeIcon: Icons.event_note, route: '/leaves'));
+    }
+
+    if (user.canViewHolidays) {
+      list.add(const _NavItem(title: 'Holidays', icon: Icons.calendar_today_outlined, activeIcon: Icons.calendar_today, route: '/holidays'));
+    }
+
     if (user.canViewEmployees) {
       list.add(const _NavItem(title: 'Employees', icon: Icons.people_outline, activeIcon: Icons.people, route: '/employees'));
       list.add(const _NavItem(title: 'Hierarchy', icon: Icons.account_tree_outlined, activeIcon: Icons.account_tree, route: '/hierarchy'));
@@ -120,15 +133,28 @@ class AppShell extends ConsumerWidget {
       list.add(const _NavItem(title: 'Company', icon: Icons.business_outlined, activeIcon: Icons.business, route: '/company'));
     }
 
+    // Role-based menus: Super Admin sees Roles, Settings and Audit; HR does not.
+    if (user.isSuperAdmin) {
+      list.add(const _NavItem(title: 'Roles & Permissions', icon: Icons.admin_panel_settings_outlined, activeIcon: Icons.admin_panel_settings, route: '/roles'));
+      list.add(const _NavItem(title: 'System Settings', icon: Icons.settings_outlined, activeIcon: Icons.settings, route: '/settings'));
+      list.add(const _NavItem(title: 'Audit Logs', icon: Icons.history_edu_outlined, activeIcon: Icons.history_edu, route: '/audit'));
+    }
+
     return list;
   }
 
   String _titleForRoute(String route) {
+    if (route.startsWith('/attendance')) return 'Attendance';
+    if (route.startsWith('/leaves')) return 'Leaves';
+    if (route.startsWith('/holidays')) return 'Holiday Calendar';
     if (route.startsWith('/employees')) return 'Employees';
     if (route.startsWith('/hierarchy')) return 'Org Hierarchy';
     if (route.startsWith('/departments')) return 'Departments';
     if (route.startsWith('/designations')) return 'Designations';
     if (route.startsWith('/company')) return 'Company Profile';
+    if (route.startsWith('/roles')) return 'Roles & Permissions';
+    if (route.startsWith('/settings')) return 'System Settings';
+    if (route.startsWith('/audit')) return 'Audit Logs';
     if (route.startsWith('/change-password')) return 'Change Password';
     return 'Dashboard';
   }

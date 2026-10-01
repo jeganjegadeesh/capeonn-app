@@ -53,6 +53,15 @@ class Employee {
     this.designation,
     this.role,
     this.reportsTo,
+    this.dob,
+    this.gender,
+    this.address,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
+    this.employmentType,
+    this.probationEndDate,
+    this.skills = const [],
+    this.certifications = const [],
   });
 
   final int id;
@@ -67,6 +76,16 @@ class Employee {
   final DesignationRef? designation;
   final RoleItem? role;
   final SupervisorRef? reportsTo;
+
+  final String? dob;
+  final String? gender;
+  final String? address;
+  final String? emergencyContactName;
+  final String? emergencyContactPhone;
+  final String? employmentType;
+  final String? probationEndDate;
+  final List<String> skills;
+  final List<Map<String, dynamic>> certifications;
 
   int? get departmentId => department?.id;
   int? get designationId => designation?.id;
@@ -106,6 +125,14 @@ class Employee {
       supervisor = SupervisorRef.fromJson(Map<String, dynamic>.from(json['reports_to'] as Map));
     }
 
+    final rawSkills = json['skills'];
+    final skills = rawSkills is List ? rawSkills.map((s) => '$s').toList() : <String>[];
+
+    final rawCerts = json['certifications'];
+    final certs = rawCerts is List
+        ? rawCerts.whereType<Map>().map((c) => Map<String, dynamic>.from(c)).toList()
+        : <Map<String, dynamic>>[];
+
     return Employee(
       id: (json['id'] as num).toInt(),
       name: json['name'] as String? ?? '',
@@ -119,6 +146,15 @@ class Employee {
       designation: desig,
       role: roleItem,
       reportsTo: supervisor,
+      dob: json['dob'] as String?,
+      gender: json['gender'] as String?,
+      address: json['address'] as String?,
+      emergencyContactName: json['emergency_contact_name'] as String?,
+      emergencyContactPhone: json['emergency_contact_phone'] as String?,
+      employmentType: json['employment_type'] as String?,
+      probationEndDate: json['probation_end_date'] as String?,
+      skills: skills,
+      certifications: certs,
     );
   }
 }
