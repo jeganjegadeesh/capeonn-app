@@ -26,7 +26,7 @@ class CompanyPage extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 err is ApiException ? err.displayMessage : 'Failed to load company details',
-                style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -56,7 +56,7 @@ class CompanyPage extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Company Profile',
                                 style: TextStyle(
                                   fontSize: 22,
@@ -89,7 +89,7 @@ class CompanyPage extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Company Profile',
                                   style: TextStyle(
                                     fontSize: 24,
@@ -188,7 +188,7 @@ class CompanyPage extends ConsumerWidget {
                                   const SizedBox(height: 4),
                                   Text(
                                     company.legalName ?? company.name,
-                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                   ),
                                 ],
                               ),
@@ -323,7 +323,7 @@ class _StatMiniCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               title,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -360,7 +360,7 @@ class _CompanyField extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
@@ -369,7 +369,7 @@ class _CompanyField extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -391,7 +391,7 @@ class _CompanyField extends StatelessWidget {
           width: 140,
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
@@ -401,7 +401,7 @@ class _CompanyField extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,

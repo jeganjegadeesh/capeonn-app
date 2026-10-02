@@ -37,7 +37,7 @@ class DepartmentsPage extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Departments',
                             style: TextStyle(
                               fontSize: 22,
@@ -70,7 +70,7 @@ class DepartmentsPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Departments',
                               style: TextStyle(
                                 fontSize: 24,
@@ -105,7 +105,7 @@ class DepartmentsPage extends ConsumerWidget {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                                  Icon(Icons.search, color: AppColors.textMuted, size: 20),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: TextField(
@@ -151,7 +151,7 @@ class DepartmentsPage extends ConsumerWidget {
                           )
                         : Row(
                             children: [
-                              const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                              Icon(Icons.search, color: AppColors.textMuted, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: TextField(
@@ -227,18 +227,18 @@ class DepartmentsPage extends ConsumerWidget {
                           child: Center(
                             child: Column(
                               children: [
-                                const Icon(Icons.apartment_outlined, size: 48, color: AppColors.textMuted),
+                                Icon(Icons.apartment_outlined, size: 48, color: AppColors.textMuted),
                                 const SizedBox(height: 12),
-                                const Text(
+                                Text(
                                   'No departments found',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   filter.search.isNotEmpty
                                       ? 'Try searching with a different term'
                                       : 'Create your first department to organize employees.',
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),
                               ],
                             ),
@@ -284,7 +284,7 @@ class DepartmentsPage extends ConsumerWidget {
                                       Expanded(
                                         child: Text(
                                           dept.name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 15,
                                             color: AppColors.textPrimary,
@@ -312,7 +312,7 @@ class DepartmentsPage extends ConsumerWidget {
                                       dept.description!,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                     ),
                                   ],
                                   const SizedBox(height: 10),
@@ -324,7 +324,7 @@ class DepartmentsPage extends ConsumerWidget {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.person_pin_outlined, size: 15, color: AppColors.textMuted),
+                                          Icon(Icons.person_pin_outlined, size: 15, color: AppColors.textMuted),
                                           const SizedBox(width: 4),
                                           Text(
                                             dept.head != null ? 'Head: ${dept.head!.name}' : 'No Head assigned',
@@ -346,7 +346,7 @@ class DepartmentsPage extends ConsumerWidget {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(Icons.people_outline, size: 13, color: AppColors.textSecondary),
+                                            Icon(Icons.people_outline, size: 13, color: AppColors.textSecondary),
                                             const SizedBox(width: 4),
                                             Text(
                                               '${dept.employeesCount ?? 0} staff',
@@ -417,7 +417,7 @@ class DepartmentsPage extends ConsumerWidget {
                                     children: [
                                       Text(
                                         dept.name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
                                           color: AppColors.textPrimary,
@@ -429,7 +429,7 @@ class DepartmentsPage extends ConsumerWidget {
                                           dept.description!,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                         ),
                                       ],
                                     ],
@@ -440,7 +440,7 @@ class DepartmentsPage extends ConsumerWidget {
                                   flex: 2,
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.person_pin_outlined, size: 16, color: AppColors.textMuted),
+                                      Icon(Icons.person_pin_outlined, size: 16, color: AppColors.textMuted),
                                       const SizedBox(width: 6),
                                       Flexible(
                                         child: Text(
@@ -467,7 +467,7 @@ class DepartmentsPage extends ConsumerWidget {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.people_outline, size: 14, color: AppColors.textSecondary),
+                                      Icon(Icons.people_outline, size: 14, color: AppColors.textSecondary),
                                       const SizedBox(width: 4),
                                       Text(
                                         '${dept.employeesCount ?? 0} staff',

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/auth_user.dart';
 
@@ -14,6 +15,7 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).value;
+    final themeMode = ref.watch(themeModeProvider);
     if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -35,7 +37,12 @@ class AppShell extends ConsumerWidget {
               onSignOut: () => ref.read(authControllerProvider.notifier).logout(),
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: child),
+            Expanded(
+              child: KeyedSubtree(
+                key: ValueKey('page_${location}_${themeMode.name}'),
+                child: child,
+              ),
+            ),
           ],
         ),
       );
@@ -73,6 +80,7 @@ class AppShell extends ConsumerWidget {
           ],
         ),
         actions: [
+          const ThemeToggleButton(compact: true),
           IconButton(
             tooltip: 'Change Password',
             icon: const Icon(Icons.lock_reset, size: 22),
@@ -99,7 +107,10 @@ class AppShell extends ConsumerWidget {
           ),
         ),
       ),
-      body: child,
+      body: KeyedSubtree(
+        key: ValueKey('page_${location}_${themeMode.name}'),
+        child: child,
+      ),
       bottomNavigationBar: _buildBottomBar(context, location, navItems),
     );
   }
@@ -212,7 +223,7 @@ class _Sidebar extends StatelessWidget {
 
     return Container(
       width: isDrawer ? null : 260,
-      color: Colors.white,
+      color: AppColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -254,7 +265,7 @@ class _Sidebar extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'CAPEONN',
                         style: TextStyle(
                           fontSize: 17,
@@ -267,7 +278,7 @@ class _Sidebar extends StatelessWidget {
                         user.companyName ?? 'Enterprise Workspace',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -282,8 +293,8 @@ class _Sidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Text(
                     'MAIN NAVIGATION',
                     style: TextStyle(
@@ -311,9 +322,32 @@ class _Sidebar extends StatelessWidget {
 
           const Divider(height: 1),
 
+          // Theme Switcher
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 6),
+                  child: Text(
+                    'APPEARANCE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textOnDarkSecondary,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                ThemeSegmentedSwitch(),
+              ],
+            ),
+          ),
+
           // User Card & Sign Out
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -346,7 +380,7 @@ class _Sidebar extends StatelessWidget {
                               user.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
@@ -457,11 +491,18 @@ class _SidebarTile extends StatelessWidget {
                 ),
                 if (isActive)
                   Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
+                    width: 3,
+                    height: 18,
+                    decoration: BoxDecoration(
                       color: AppColors.primary,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                          blurRadius: 6,
+                          offset: const Offset(0, 0),
+                        ),
+                      ],
                     ),
                   ),
               ],

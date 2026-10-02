@@ -183,7 +183,7 @@ class DashboardOverviewPage extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // Quick Navigation Shortcuts
-                const Text(
+                Text(
                   'Quick Management Actions',
                   style: TextStyle(
                     fontSize: 16,
@@ -334,7 +334,7 @@ class DashboardOverviewPage extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           'Enforced automatically by Capeonn API based on your current role level.',
                           style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                         ),
@@ -356,7 +356,7 @@ class DashboardOverviewPage extends ConsumerWidget {
                                   children: [
                                     Text(
                                       entry.key,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: AppColors.textPrimary,
@@ -433,7 +433,7 @@ class _MetricCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textSecondary,
@@ -452,7 +452,7 @@ class _MetricCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   valueText,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -461,7 +461,7 @@ class _MetricCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textMuted,
                   ),
@@ -522,7 +522,7 @@ class _ActionShortcut extends StatelessWidget {
                         description,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                       ),
                     ],
                   ),
@@ -560,7 +560,7 @@ class _DetailGrid extends StatelessWidget {
                       children: [
                         Text(
                           it.$1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.w500,
@@ -569,7 +569,7 @@ class _DetailGrid extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           it.$2,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
@@ -584,7 +584,7 @@ class _DetailGrid extends StatelessWidget {
                           width: 140,
                           child: Text(
                             it.$1,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w500,
@@ -594,7 +594,7 @@ class _DetailGrid extends StatelessWidget {
                         Expanded(
                           child: Text(
                             it.$2,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,

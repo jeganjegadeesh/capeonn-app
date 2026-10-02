@@ -25,7 +25,7 @@ class RolesPermissionsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Roles & Permissions Management',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
@@ -78,7 +78,7 @@ class RolesPermissionsPage extends ConsumerWidget {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.border),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -102,7 +102,7 @@ class RolesPermissionsPage extends ConsumerWidget {
                                     children: [
                                       Text(
                                         role.name,
-                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
@@ -118,7 +118,7 @@ class RolesPermissionsPage extends ConsumerWidget {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(4)),
-                                          child: const Text('SYSTEM', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                          child: Text('SYSTEM', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                         ),
                                       ],
                                     ],
@@ -126,12 +126,12 @@ class RolesPermissionsPage extends ConsumerWidget {
                                   const SizedBox(height: 6),
                                   Text(
                                     role.description ?? 'Role description and operational scopes.',
-                                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
                                     'Role Identifier: ${role.slug}',
-                                    style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
+                                    style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
                                   ),
                                 ],
                               ),

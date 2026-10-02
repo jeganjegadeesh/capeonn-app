@@ -86,7 +86,7 @@ class _EmployeeDetailPageState extends ConsumerState<EmployeeDetailPage> with Si
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.border),
                       ),
                       child: Padding(
                         padding: EdgeInsets.all(isMobile ? 16 : 24),
@@ -140,7 +140,7 @@ class _EmployeeDetailPageState extends ConsumerState<EmployeeDetailPage> with Si
                                         ],
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(emp.email, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                      Text(emp.email, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                       const SizedBox(height: 8),
                                       Wrap(
                                         spacing: 8,
@@ -242,7 +242,7 @@ class _OverviewTab extends ConsumerWidget {
           // Position & Organization
           Card(
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -270,7 +270,7 @@ class _OverviewTab extends ConsumerWidget {
           // Personal & Emergency Contact Details
           Card(
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -307,7 +307,7 @@ class _OverviewTab extends ConsumerWidget {
           // Skills & Certifications
           Card(
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -485,7 +485,7 @@ class _DocumentsTab extends ConsumerWidget {
                   final d = docs[idx];
                   return Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: AppColors.border)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: AppColors.border)),
                     child: ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
@@ -622,7 +622,7 @@ class _HistoryTab extends ConsumerWidget {
                   final h = histories[idx];
                   return Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: AppColors.border)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: AppColors.border)),
                     child: ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
@@ -731,9 +731,9 @@ class _InfoRow extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         ],
       );
     }
@@ -743,10 +743,10 @@ class _InfoRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 180,
-          child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+          child: Text(label, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
         ),
         Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          child: Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         ),
       ],
     );

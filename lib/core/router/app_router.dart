@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../theme/theme_provider.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/change_password_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
@@ -29,6 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   // Re-run the redirect logic whenever the sign-in state changes.
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (_, _) => refresh.value++);
+  ref.listen(themeModeProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(

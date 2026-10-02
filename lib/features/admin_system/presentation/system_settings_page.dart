@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../organization/application/organization_controller.dart';
 
 class SystemSettingsPage extends ConsumerStatefulWidget {
@@ -34,7 +35,7 @@ class _SystemSettingsPageState extends ConsumerState<SystemSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'System Settings',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
@@ -68,13 +69,42 @@ class _SystemSettingsPageState extends ConsumerState<SystemSettingsPage> {
             ),
             const SizedBox(height: 20),
 
+            // Theme & Appearance Card
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Theme & Appearance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Choose between light, dark, or system preference for the Capeonn interface.',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    const SizedBox(
+                      width: 320,
+                      child: ThemeSegmentedSwitch(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Organization Overview Card
             companyAsync.when(
               data: (company) => Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.border),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -89,7 +119,7 @@ class _SystemSettingsPageState extends ConsumerState<SystemSettingsPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Company Name', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                Text('Company Name', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                 const SizedBox(height: 4),
                                 Text(company.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                               ],
@@ -99,7 +129,7 @@ class _SystemSettingsPageState extends ConsumerState<SystemSettingsPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Timezone', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                Text('Timezone', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                 const SizedBox(height: 4),
                                 Text(company.timezone, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                               ],
@@ -121,7 +151,7 @@ class _SystemSettingsPageState extends ConsumerState<SystemSettingsPage> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: Column(
                 children: [

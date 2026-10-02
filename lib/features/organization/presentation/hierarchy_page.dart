@@ -32,7 +32,7 @@ class HierarchyPage extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Org Hierarchy',
                             style: TextStyle(
                               fontSize: 22,
@@ -43,7 +43,7 @@ class HierarchyPage extends ConsumerWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Inactive', style: TextStyle(fontSize: 12)),
+                              Text('Inactive', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 4),
                               Switch(
                                 value: includeInactive,
@@ -56,7 +56,7 @@ class HierarchyPage extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      const Text(
+                      Text(
                         'Manager → Team Lead → Employee reporting chain',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
@@ -69,7 +69,7 @@ class HierarchyPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Organization Hierarchy',
                               style: TextStyle(
                                 fontSize: 24,
@@ -87,7 +87,7 @@ class HierarchyPage extends ConsumerWidget {
                       ),
                       Row(
                         children: [
-                          const Text('Include Inactive', style: TextStyle(fontSize: 13)),
+                          Text('Include Inactive', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                           const SizedBox(width: 8),
                           Switch(
                             value: includeInactive,
@@ -132,14 +132,14 @@ class HierarchyPage extends ConsumerWidget {
                           child: Center(
                             child: Column(
                               children: [
-                                const Icon(Icons.account_tree_outlined, size: 48, color: AppColors.textMuted),
+                                Icon(Icons.account_tree_outlined, size: 48, color: AppColors.textMuted),
                                 const SizedBox(height: 12),
-                                const Text(
+                                Text(
                                   'No hierarchy records found',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
+                                Text(
                                   'Assign reporting managers to employees to see the organization chart.',
                                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),
@@ -238,7 +238,7 @@ class _HierarchyTreeNodeState extends State<_HierarchyTreeNode> {
                                         children: [
                                           Text(
                                             node.name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
                                               color: AppColors.textPrimary,
@@ -247,7 +247,7 @@ class _HierarchyTreeNodeState extends State<_HierarchyTreeNode> {
                                           ),
                                           Text(
                                             node.designation ?? 'Team Member',
-                                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
@@ -305,7 +305,7 @@ class _HierarchyTreeNodeState extends State<_HierarchyTreeNode> {
                                     if (node.employeeCode != null)
                                       Text(
                                         '(${node.employeeCode})',
-                                        style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                        style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                                       ),
                                     if (!node.isActive)
                                       Container(
@@ -343,7 +343,7 @@ class _HierarchyTreeNodeState extends State<_HierarchyTreeNode> {
                                           Flexible(
                                             child: Text(
                                               node.name,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                                 color: AppColors.textPrimary,
@@ -355,7 +355,7 @@ class _HierarchyTreeNodeState extends State<_HierarchyTreeNode> {
                                             const SizedBox(width: 8),
                                             Text(
                                               '(${node.employeeCode})',
-                                              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                                              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                                             ),
                                           ],
                                         ],
@@ -363,7 +363,7 @@ class _HierarchyTreeNodeState extends State<_HierarchyTreeNode> {
                                       const SizedBox(height: 2),
                                       Text(
                                         node.designation ?? 'Team Member',
-                                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ],

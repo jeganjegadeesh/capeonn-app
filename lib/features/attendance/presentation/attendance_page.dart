@@ -56,16 +56,16 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).value;
     if (user != null && user.isSuperAdmin) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.block, size: 48, color: AppColors.textMuted),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Text(
                   'Attendance tracking is not applicable for Super Admin accounts.',
                   textAlign: TextAlign.center,
@@ -96,7 +96,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Attendance & Time Tracking',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
@@ -131,9 +131,9 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border),
                   ),
-                  color: Colors.white,
+                  color: AppColors.surface,
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
@@ -317,7 +317,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
             // Tabs Header
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.border),
               ),
@@ -609,7 +609,7 @@ class _MetricCard extends StatelessWidget {
       width: width,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -627,7 +627,7 @@ class _MetricCard extends StatelessWidget {
               children: [
                 Text(title, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 2),
-                Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -657,7 +657,7 @@ class _MyAttendanceList extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: ListTile(
                 leading: Container(
@@ -767,7 +767,7 @@ class _TeamAttendanceList extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: ListTile(
                 title: Row(
@@ -826,7 +826,7 @@ class _RegularizationsList extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),

@@ -41,7 +41,7 @@ class EmployeesPage extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Employees',
                             style: TextStyle(
                               fontSize: 22,
@@ -61,7 +61,7 @@ class EmployeesPage extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Directory of team members, reporting relationships & roles',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
@@ -74,7 +74,7 @@ class EmployeesPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Employee Directory',
                               style: TextStyle(
                                 fontSize: 24,
@@ -108,7 +108,7 @@ class EmployeesPage extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                            Icon(Icons.search, color: AppColors.textMuted, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: TextField(
@@ -259,14 +259,14 @@ class EmployeesPage extends ConsumerWidget {
                           child: Center(
                             child: Column(
                               children: [
-                                const Icon(Icons.people_outline, size: 48, color: AppColors.textMuted),
+                                Icon(Icons.people_outline, size: 48, color: AppColors.textMuted),
                                 const SizedBox(height: 12),
                                 const Text(
                                   'No employees found',
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
+                                Text(
                                   'Try adjusting your search filters or add a new team member.',
                                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),
@@ -320,7 +320,7 @@ class EmployeesPage extends ConsumerWidget {
                                                 children: [
                                                   Text(
                                                     emp.name,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontWeight: FontWeight.bold,
                                                       fontSize: 14,
                                                       color: AppColors.textPrimary,
@@ -330,7 +330,7 @@ class EmployeesPage extends ConsumerWidget {
                                                   const SizedBox(height: 2),
                                                   Text(
                                                     emp.email,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       color: AppColors.textSecondary,
                                                       fontSize: 12,
                                                     ),
@@ -388,7 +388,7 @@ class EmployeesPage extends ConsumerWidget {
                                                 ),
                                                 child: Text(
                                                   emp.employeeCode!,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 11,
                                                     color: AppColors.textSecondary,
                                                     fontWeight: FontWeight.w600,
@@ -401,7 +401,7 @@ class EmployeesPage extends ConsumerWidget {
                                                   if (emp.designationName.isNotEmpty) emp.designationName,
                                                   if (emp.departmentName.isNotEmpty) emp.departmentName,
                                                 ].join(' • '),
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 11,
                                                   color: AppColors.textMuted,
                                                 ),
@@ -435,12 +435,12 @@ class EmployeesPage extends ConsumerWidget {
                                                 onPressed: () => _confirmDelete(context, ref, emp),
                                               ),
                                               const Spacer(),
-                                              const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                                              Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                             ],
                                           ),
                                         ] else ...[
                                           const SizedBox(height: 4),
-                                          const Align(
+                                          Align(
                                             alignment: Alignment.centerRight,
                                             child: Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                           ),
@@ -482,7 +482,7 @@ class EmployeesPage extends ConsumerWidget {
                                               children: [
                                                 Text(
                                                   emp.name,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 14,
                                                     color: AppColors.textPrimary,
@@ -502,7 +502,7 @@ class EmployeesPage extends ConsumerWidget {
                                                     ),
                                                     child: Text(
                                                       emp.employeeCode!,
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 11,
                                                         color: AppColors.textSecondary,
                                                         fontWeight: FontWeight.w600,
@@ -514,7 +514,7 @@ class EmployeesPage extends ConsumerWidget {
                                             const SizedBox(height: 2),
                                             Text(
                                               emp.email,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color: AppColors.textSecondary,
                                                 fontSize: 12,
                                               ),
@@ -539,7 +539,7 @@ class EmployeesPage extends ConsumerWidget {
                                             ),
                                             Text(
                                               emp.departmentName,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 11,
                                                 color: AppColors.textSecondary,
                                               ),
@@ -594,7 +594,7 @@ class EmployeesPage extends ConsumerWidget {
                                         ),
                                       ],
                                       const SizedBox(width: 4),
-                                      const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+                                      Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
                                     ],
                                   ),
                                 ),
@@ -612,7 +612,7 @@ class EmployeesPage extends ConsumerWidget {
                                 'Showing ${(pageData.currentPage - 1) * pageData.perPage + 1} - '
                                 '${((pageData.currentPage - 1) * pageData.perPage + pageData.items.length)} '
                                 'of ${pageData.total} employees',
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                               ),
                               const SizedBox(height: 10),
                               Row(
@@ -666,7 +666,7 @@ class EmployeesPage extends ConsumerWidget {
                                 'Showing ${(pageData.currentPage - 1) * pageData.perPage + 1} - '
                                 '${((pageData.currentPage - 1) * pageData.perPage + pageData.items.length)} '
                                 'of ${pageData.total} employees',
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                               ),
                               Row(
                                 children: [

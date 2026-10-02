@@ -58,7 +58,7 @@ class AuditLogsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Audit & Security Logs',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
@@ -103,7 +103,7 @@ class AuditLogsPage extends ConsumerWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(14.0),
@@ -127,17 +127,17 @@ class AuditLogsPage extends ConsumerWidget {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(action, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                  Text(time, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                                  Text(time, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(details, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(details, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(Icons.person_outline, size: 12, color: AppColors.textMuted),
+                                  Icon(Icons.person_outline, size: 12, color: AppColors.textMuted),
                                   const SizedBox(width: 4),
-                                  Text('Actor: $actor', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                                  Text('Actor: $actor', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                                 ],
                               ),
                             ],

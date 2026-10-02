@@ -36,7 +36,7 @@ class DesignationsPage extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Designations',
                             style: TextStyle(
                               fontSize: 22,
@@ -69,7 +69,7 @@ class DesignationsPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Designations',
                               style: TextStyle(
                                 fontSize: 24,
@@ -104,7 +104,7 @@ class DesignationsPage extends ConsumerWidget {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                                  Icon(Icons.search, color: AppColors.textMuted, size: 20),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: TextField(
@@ -148,7 +148,7 @@ class DesignationsPage extends ConsumerWidget {
                           )
                         : Row(
                             children: [
-                              const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                              Icon(Icons.search, color: AppColors.textMuted, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: TextField(
@@ -221,18 +221,18 @@ class DesignationsPage extends ConsumerWidget {
                           child: Center(
                             child: Column(
                               children: [
-                                const Icon(Icons.badge_outlined, size: 48, color: AppColors.textMuted),
+                                Icon(Icons.badge_outlined, size: 48, color: AppColors.textMuted),
                                 const SizedBox(height: 12),
-                                const Text(
+                                Text(
                                   'No designations found',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   filter.search.isNotEmpty
                                       ? 'Try searching with a different term'
                                       : 'Create job titles for employees to hold.',
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),
                               ],
                             ),
@@ -271,7 +271,7 @@ class DesignationsPage extends ConsumerWidget {
                                       Expanded(
                                         child: Text(
                                           desig.name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 15,
                                             color: AppColors.textPrimary,
@@ -354,7 +354,7 @@ class DesignationsPage extends ConsumerWidget {
                                 Expanded(
                                   child: Text(
                                     desig.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
                                       color: AppColors.textPrimary,

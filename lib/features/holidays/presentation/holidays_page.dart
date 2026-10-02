@@ -38,7 +38,7 @@ class _HolidaysPageState extends ConsumerState<HolidaysPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Holiday Calendar',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
@@ -240,7 +240,7 @@ class _HolidayCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -251,7 +251,7 @@ class _HolidayCard extends StatelessWidget {
             width: 52,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: holiday.isPast ? const Color(0xFFF1F5F9) : typeBg,
+              color: holiday.isPast ? AppColors.surfaceHover : typeBg,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(

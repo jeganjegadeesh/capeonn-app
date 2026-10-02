@@ -33,16 +33,16 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).value;
     if (user != null && user.isSuperAdmin) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.block, size: 48, color: AppColors.textMuted),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Text(
                   'Leave management is not applicable for Super Admin accounts.',
                   textAlign: TextAlign.center,
@@ -73,7 +73,7 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Leave Management',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
@@ -111,7 +111,7 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
             // Tabs Header
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.border),
               ),
@@ -183,7 +183,7 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
               width: cardWidth,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.border),
               ),
@@ -210,7 +210,7 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
                   const SizedBox(height: 12),
                   Text(
                     b.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -417,7 +417,7 @@ class _MyLeavesList extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: ListTile(
                 leading: Container(
@@ -531,7 +531,7 @@ class _ApprovalLeavesList extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -546,7 +546,7 @@ class _ApprovalLeavesList extends ConsumerWidget {
                               Text(l.userName ?? 'Employee', style: const TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(width: 8),
                               Text('${l.daysCount}d (${l.leaveTypeCode})',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               if (l.finalApprover) ...[
                                 const SizedBox(width: 6),
                                 Container(
@@ -562,14 +562,14 @@ class _ApprovalLeavesList extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Text('${l.startDate} to ${l.endDate} • ${l.reason}', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                          Text('${l.startDate} to ${l.endDate} • ${l.reason}', style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
                         ],
                       ),
                     ),
                     if (l.status == 'pending') ...[
                       if (isOwnRequest)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
                             'Self-Approval Blocked',
                             style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.textSecondary),
