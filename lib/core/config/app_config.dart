@@ -3,18 +3,29 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   AppConfig._();
 
-  /// Override at build/run time, e.g. for a physical phone on your Wi-Fi:
-  ///   flutter run --dart-define=API_BASE_URL=http://192.168.1.20:8000/api/v1
-  static const String _override = String.fromEnvironment('API_BASE_URL');
+  // ===========================================================================
+  // BASE URL CONFIGURATION
+  // Comment / Uncomment the line you need:
+  // ===========================================================================
 
-  static String get apiBaseUrl {
-    if (_override.isNotEmpty) return _override;
+  // ---> DEV URL (Active)
+  // static String get apiBaseUrl => devUrl;
 
-    // The Android emulator reaches your computer's localhost through 10.0.2.2.
+  // ---> LOCAL URL (Uncomment line below and comment out DEV line above to use local)
+  static String get apiBaseUrl => localUrl;
+
+  // ===========================================================================
+  // URL DEFINITIONS
+  // ===========================================================================
+
+  /// Remote Dev Server URL
+  static const String devUrl = 'https://capeonn.jeganjegadeesh.in/api/v1';
+
+  /// Local Server URL (10.0.2.2 on Android emulator, localhost on Web / Desktop / iOS)
+  static String get localUrl {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8000/api/v1';
     }
-    // Web, Windows, iOS simulator.
     return 'http://localhost:8000/api/v1';
   }
 
