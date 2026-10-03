@@ -326,6 +326,8 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                 indicatorColor: AppColors.primary,
                 labelColor: AppColors.primary,
                 unselectedLabelColor: AppColors.textSecondary,
+                isScrollable: !isDesktop,
+                tabAlignment: !isDesktop ? TabAlignment.start : TabAlignment.fill,
                 tabs: [
                   const Tab(text: 'My Attendance Logs'),
                   if (user?.canManageAttendance == true)
@@ -362,7 +364,9 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
   Widget _buildSummaryCards(AttendanceSummary s) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = constraints.maxWidth >= 700 ? (constraints.maxWidth - 48) / 4 : (constraints.maxWidth - 16) / 2;
+        final cardWidth = constraints.maxWidth >= 700
+            ? (constraints.maxWidth - 48) / 4
+            : (constraints.maxWidth >= 380 ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth);
 
         return Wrap(
           spacing: 16,
@@ -511,9 +515,10 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
           width: 400,
           child: Form(
             key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 TextFormField(
                   controller: dateController,
                   decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
@@ -549,6 +554,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
               ],
             ),
           ),
+        ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -625,9 +631,9 @@ class _MetricCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(title, style: TextStyle(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -681,19 +687,19 @@ class _MyAttendanceList extends ConsumerWidget {
                     ),
                   ),
                 ),
-                title: Row(
+                title: Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(r.date, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
                     _statusBadge(r.status),
-                    if (r.isFlagged) ...[
-                      const SizedBox(width: 6),
+                    if (r.isFlagged)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(color: AppColors.roseContainer, borderRadius: BorderRadius.circular(4)),
                         child: const Text('FLAGGED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.rose)),
                       ),
-                    ],
                   ],
                 ),
                 subtitle: Text(
@@ -770,10 +776,12 @@ class _TeamAttendanceList extends ConsumerWidget {
                 side: BorderSide(color: AppColors.border),
               ),
               child: ListTile(
-                title: Row(
+                title: Wrap(
+                  spacing: 8,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(r.userName ?? 'Employee', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
                     if (r.employeeCode != null)
                       Text('(${r.employeeCode})', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   ],
@@ -837,10 +845,12 @@ class _RegularizationsList extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(r.date, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 8),
                               _statusPill(r.status),
                             ],
                           ),

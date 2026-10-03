@@ -99,6 +99,10 @@ class AuthUser {
   bool get canManageDocuments => can('documents.manage');
   bool get canVerifyDocuments => can('documents.verify');
 
+  bool get canViewProjects => can('projects.view');
+  bool get canManageProjects => can('projects.manage');
+  bool get canAssignProjects => can('projects.assign');
+
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     String? nameOf(dynamic value) => value is Map ? value['name'] as String? : null;
 

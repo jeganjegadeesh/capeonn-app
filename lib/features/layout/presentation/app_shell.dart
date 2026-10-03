@@ -120,6 +120,15 @@ class AppShell extends ConsumerWidget {
       const _NavItem(title: 'Dashboard', icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, route: '/home'),
     ];
 
+    if (user.canViewProjects) {
+      list.add(const _NavItem(
+        title: 'Projects',
+        icon: Icons.folder_special_outlined,
+        activeIcon: Icons.folder_special,
+        route: '/projects',
+      ));
+    }
+
     // Attendance & Leaves are strictly hidden for Super Admin
     if (user.canAccessAttendance && (user.canViewAttendance || user.canRecordAttendance)) {
       list.add(const _NavItem(title: 'Attendance', icon: Icons.access_time_outlined, activeIcon: Icons.access_time_filled, route: '/attendance'));
@@ -155,6 +164,7 @@ class AppShell extends ConsumerWidget {
   }
 
   String _titleForRoute(String route) {
+    if (route.startsWith('/projects')) return 'Projects';
     if (route.startsWith('/attendance')) return 'Attendance';
     if (route.startsWith('/leaves')) return 'Leaves';
     if (route.startsWith('/holidays')) return 'Holiday Calendar';

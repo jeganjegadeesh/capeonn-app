@@ -195,6 +195,8 @@ class _EmployeeDetailPageState extends ConsumerState<EmployeeDetailPage> with Si
                         indicatorColor: AppColors.primary,
                         labelColor: AppColors.primary,
                         unselectedLabelColor: AppColors.textSecondary,
+                        isScrollable: isMobile,
+                        tabAlignment: isMobile ? TabAlignment.start : TabAlignment.fill,
                         tabs: const [
                           Tab(text: 'Profile & Skills'),
                           Tab(text: 'Documents'),
@@ -276,8 +278,11 @@ class _OverviewTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       const Text('Personal & Emergency Contact', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                       if (canEdit)
@@ -378,6 +383,7 @@ class _OverviewTab extends ConsumerWidget {
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       initialValue: gender,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Gender', border: OutlineInputBorder()),
                       items: const [
                         DropdownMenuItem(value: 'male', child: Text('Male')),
@@ -458,8 +464,11 @@ class _DocumentsTab extends ConsumerWidget {
 
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
           children: [
             const Text('Official Documents & Records', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             ElevatedButton.icon(
@@ -594,8 +603,11 @@ class _HistoryTab extends ConsumerWidget {
 
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
           children: [
             const Text('Career Milestones & Audit Trail', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             if (canManage)

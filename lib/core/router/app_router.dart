@@ -23,6 +23,8 @@ import '../../features/holidays/presentation/holidays_page.dart';
 import '../../features/admin_system/presentation/roles_permissions_page.dart';
 import '../../features/admin_system/presentation/system_settings_page.dart';
 import '../../features/admin_system/presentation/audit_logs_page.dart';
+import '../../features/projects/presentation/projects_page.dart';
+import '../../features/projects/presentation/project_workspace_page.dart';
 
 const _publicRoutes = {'/login', '/forgot-password', '/reset-password'};
 
@@ -96,6 +98,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/roles', builder: (_, _) => const RolesPermissionsPage()),
           GoRoute(path: '/settings', builder: (_, _) => const SystemSettingsPage()),
           GoRoute(path: '/audit', builder: (_, _) => const AuditLogsPage()),
+          GoRoute(path: '/projects', builder: (_, _) => const ProjectsPage()),
+          GoRoute(
+            path: '/projects/:id',
+            builder: (_, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              return ProjectWorkspacePage(projectId: id);
+            },
+          ),
           GoRoute(path: '/change-password', builder: (_, _) => const ChangePasswordPage()),
         ],
       ),

@@ -197,6 +197,13 @@ class DashboardOverviewPage extends ConsumerWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
+                    if (user.canViewProjects)
+                      _ActionShortcut(
+                        icon: Icons.folder_special,
+                        label: 'Projects',
+                        description: 'Workspace, team & milestones',
+                        onTap: () => context.go('/projects'),
+                      ),
                     if (user.isSuperAdmin) ...[
                       _ActionShortcut(
                         icon: Icons.admin_panel_settings,
@@ -490,8 +497,10 @@ class _ActionShortcut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final itemWidth = screenWidth < 540 ? double.infinity : 250.0;
     return SizedBox(
-      width: 250,
+      width: itemWidth,
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

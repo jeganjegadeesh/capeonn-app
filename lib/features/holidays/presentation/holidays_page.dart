@@ -32,49 +32,92 @@ class _HolidaysPageState extends ConsumerState<HolidaysPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            if (isDesktop)
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Holiday Calendar',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Official company and public holiday schedule for the year.',
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DropdownButton<int>(
+                    value: _selectedYear,
+                    items: [2025, 2026, 2027].map((y) {
+                      return DropdownMenuItem<int>(value: y, child: Text('$y Calendar'));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _selectedYear = val);
+                    },
+                  ),
+                  if (canManage) ...[
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Holiday', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () => _openAddHolidayDialog(context),
+                    ),
+                  ],
+                ],
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Holiday Calendar',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Official company and public holiday schedule for the year.',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Text(
-                        'Holiday Calendar',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      DropdownButton<int>(
+                        value: _selectedYear,
+                        items: [2025, 2026, 2027].map((y) {
+                          return DropdownMenuItem<int>(value: y, child: Text('$y Calendar'));
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _selectedYear = val);
+                        },
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Official company and public holiday schedule for the year.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      ),
+                      const Spacer(),
+                      if (canManage)
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Add Holiday', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          onPressed: () => _openAddHolidayDialog(context),
+                        ),
                     ],
                   ),
-                ),
-                DropdownButton<int>(
-                  value: _selectedYear,
-                  items: [2025, 2026, 2027].map((y) {
-                    return DropdownMenuItem<int>(value: y, child: Text('$y Calendar'));
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedYear = val);
-                  },
-                ),
-                if (canManage) ...[
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Holiday', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () => _openAddHolidayDialog(context),
-                  ),
                 ],
-              ],
-            ),
+              ),
             const SizedBox(height: 20),
 
             // Holidays List
@@ -130,40 +173,43 @@ class _HolidaysPageState extends ConsumerState<HolidaysPage> {
             width: 400,
             child: Form(
               key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'Holiday Name', border: OutlineInputBorder()),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: dateController,
-                    decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: type,
-                    decoration: const InputDecoration(labelText: 'Holiday Type', border: OutlineInputBorder()),
-                    items: const [
-                      DropdownMenuItem(value: 'national', child: Text('National Holiday')),
-                      DropdownMenuItem(value: 'festival', child: Text('Festival Holiday')),
-                      DropdownMenuItem(value: 'company', child: Text('Company Holiday')),
-                      DropdownMenuItem(value: 'optional', child: Text('Optional / Floating')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => type = val);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: descController,
-                    decoration: const InputDecoration(labelText: 'Description (optional)', border: OutlineInputBorder()),
-                  ),
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Holiday Name', border: OutlineInputBorder()),
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: dateController,
+                      decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: type,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Holiday Type', border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(value: 'national', child: Text('National Holiday')),
+                        DropdownMenuItem(value: 'festival', child: Text('Festival Holiday')),
+                        DropdownMenuItem(value: 'company', child: Text('Company Holiday')),
+                        DropdownMenuItem(value: 'optional', child: Text('Optional / Floating')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => type = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: descController,
+                      decoration: const InputDecoration(labelText: 'Description (optional)', border: OutlineInputBorder()),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -67,37 +67,68 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Page Header
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Leave Management',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Track leave quotas, apply for time off, and manage team approvals.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      ),
-                    ],
+            if (isDesktop)
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Leave Management',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Track leave quotas, apply for time off, and manage team approvals.',
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Apply for Leave', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => _openApplyLeaveDialog(context),
                   ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Apply for Leave', style: TextStyle(fontWeight: FontWeight.bold)),
-                  onPressed: () => _openApplyLeaveDialog(context),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Leave Management',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Track leave quotas, apply for time off, and manage team approvals.',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Apply for Leave', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () => _openApplyLeaveDialog(context),
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: 20),
 
             // Balances Row
@@ -120,6 +151,8 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
                 indicatorColor: AppColors.primary,
                 labelColor: AppColors.primary,
                 unselectedLabelColor: AppColors.textSecondary,
+                isScrollable: !isDesktop,
+                tabAlignment: !isDesktop ? TabAlignment.start : TabAlignment.fill,
                 tabs: [
                   const Tab(text: 'My Leave Applications'),
                   Tab(text: canApprove ? 'Team Approvals' : 'Holiday Summary'),
@@ -153,7 +186,9 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = constraints.maxWidth >= 700 ? (constraints.maxWidth - 48) / 4 : (constraints.maxWidth - 16) / 2;
+        final cardWidth = constraints.maxWidth >= 700
+            ? (constraints.maxWidth - 48) / 4
+            : (constraints.maxWidth >= 380 ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth);
 
         return Wrap(
           spacing: 16,
@@ -238,6 +273,8 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
                   Text(
                     'Used: ${b.usedDays.toInt()}d • Pending: ${b.pendingDays.toInt()}d',
                     style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -282,11 +319,12 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
                     // Leave Type Dropdown
                     DropdownButtonFormField<int>(
                       initialValue: selectedTypeId,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Leave Type', border: OutlineInputBorder()),
                       items: balances.map((b) {
                         return DropdownMenuItem<int>(
                           value: b.leaveTypeId,
-                          child: Text('${b.name} (${b.remainingDays} days remaining)'),
+                          child: Text('${b.name} (${b.remainingDays} days remaining)', overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -434,11 +472,13 @@ class _MyLeavesList extends ConsumerWidget {
                     ),
                   ),
                 ),
-                title: Row(
+                title: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text('${l.startDate} ${l.startDate != l.endDate ? "to ${l.endDate}" : ""}',
                         style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
                     _statusBadge(l.status),
                   ],
                 ),
@@ -541,14 +581,15 @@ class _ApprovalLeavesList extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(l.userName ?? 'Employee', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 8),
                               Text('${l.daysCount}d (${l.leaveTypeCode})',
                                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                              if (l.finalApprover) ...[
-                                const SizedBox(width: 6),
+                              if (l.finalApprover)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                   decoration: BoxDecoration(
@@ -558,7 +599,6 @@ class _ApprovalLeavesList extends ConsumerWidget {
                                   ),
                                   child: const Text('Final Approval', style: TextStyle(fontSize: 9, color: Color(0xFF1D4ED8), fontWeight: FontWeight.bold)),
                                 ),
-                              ],
                             ],
                           ),
                           const SizedBox(height: 4),
