@@ -49,8 +49,9 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
       body: detailAsync.when(
         data: (detail) {
           final p = detail.project;
-          final isLocked = const ['on_hold', 'completed', 'archived', 'cancelled'].contains(p.status);
+          final isLocked = !p.acceptsWork;
           final isTeamLead = p.teamLeadId != null && p.teamLeadId == currentUser?.id;
+          final canManageTeam = (currentUser?.canManageProjectTeam ?? false) && (isTeamLead || canManage);
           final canRequestCompletion = p.status == 'active' &&
               p.completionRequestedAt == null &&
               (canManage || isTeamLead);
@@ -185,7 +186,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                 _TeamMembersTab(
                   project: p,
                   members: detail.members,
-                  canAssign: canAssign,
+                  canManageTeam: canManageTeam,
                   isLocked: isLocked,
                 ),
 
@@ -1288,13 +1289,13 @@ class _TeamMembersTab extends ConsumerWidget {
   const _TeamMembersTab({
     required this.project,
     required this.members,
-    required this.canAssign,
+    required this.canManageTeam,
     required this.isLocked,
   });
 
   final ProjectItem project;
   final List<ProjectMemberItem> members;
-  final bool canAssign;
+  final bool canManageTeam;
   final bool isLocked;
 
   @override
@@ -1320,7 +1321,7 @@ class _TeamMembersTab extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Project is ${project.statusDisplay}. Member modifications are locked.',
+                      'Project is ${project.statusDisplay}. Member modifications are locked and new work cannot be accepted.',
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
                     ),
                   ),
@@ -1328,6 +1329,69 @@ class _TeamMembersTab extends ConsumerWidget {
               ),
             ),
           ],
+
+          // Assigned Team Lead Banner/Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppColors.primary,
+                  child: Text(
+                    project.teamLeadName != null && project.teamLeadName!.isNotEmpty
+                        ? project.teamLeadName![0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            project.teamLeadName ?? 'No Team Lead Assigned',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Team Lead',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        project.teamLeadEmail ?? 'Assign a Team Lead to split and assign tasks (Phase 5)',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           Wrap(
             alignment: WrapAlignment.spaceBetween,
@@ -1339,7 +1403,7 @@ class _TeamMembersTab extends ConsumerWidget {
                 'Project Team Roster (${members.length})',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
-              if (canAssign && !isLocked) ...[
+              if (canManageTeam && !isLocked) ...[
                 ElevatedButton.icon(
                   onPressed: () => showDialog<bool>(
                     context: context,
@@ -1457,7 +1521,7 @@ class _TeamMembersTab extends ConsumerWidget {
                           ),
 
                           // Action menu (Update role, Remove) - only when not locked
-                          if (canAssign && !isLocked) ...[
+                          if (canManageTeam && !isLocked) ...[
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert, size: 20),
                               onSelected: (action) async {

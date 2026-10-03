@@ -102,6 +102,9 @@ class AuthUser {
   bool get canViewProjects => can('projects.view');
   bool get canManageProjects => can('projects.manage');
   bool get canAssignProjects => can('projects.assign');
+  bool get canManageProjectTeam => can('projects.team');
+  bool get canViewProjectActivities => can('projects.activity');
+  bool get canChangeProjectStatus => can('projects.status');
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     String? nameOf(dynamic value) => value is Map ? value['name'] as String? : null;

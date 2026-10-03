@@ -80,6 +80,8 @@ class ProjectItem {
   final String? updatedAt;
 
   bool get isCompletionRequested => completionRequestedAt != null;
+  bool get acceptsWork => !const ['on_hold', 'completed', 'archived', 'cancelled'].contains(status.toLowerCase());
+  bool get isArchived => status.toLowerCase() == 'archived';
 
   String get statusDisplay {
     switch (status.toLowerCase()) {
