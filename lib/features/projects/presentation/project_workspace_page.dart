@@ -11,6 +11,8 @@ import 'add_project_member_dialog.dart';
 import 'assign_lead_dialog.dart';
 import 'project_form_dialog.dart';
 import '../../tasks/presentation/project_tasks_tab.dart';
+import 'tabs/project_files_tab.dart';
+import 'tabs/project_chat_tab.dart';
 
 class ProjectWorkspacePage extends ConsumerStatefulWidget {
   const ProjectWorkspacePage({super.key, required this.projectId});
@@ -198,11 +200,11 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                 // 4. Tasks & Milestones Tab (Phase 5)
                 ProjectTasksTab(project: p, members: detail.members),
 
-                // 5. Files & Attachments Preview Tab (Phase 6)
-                _FilesPlaceholderTab(project: p),
+                // 5. Files & Attachments Tab (Phase 6)
+                ProjectFilesTab(project: p),
 
-                // 6. Project Discussions Preview Tab (Phase 6)
-                _DiscussionsPlaceholderTab(project: p),
+                // 6. Project Discussions & Chat Tab (Phase 6)
+                ProjectChatTab(project: p),
               ],
             ),
           );
@@ -1807,194 +1809,4 @@ class _ActivityHistoryTab extends StatelessWidget {
 
 // 4. Tasks & Milestones Tab (handled by ProjectTasksTab)
 
-// -----------------------------------------------------------------------------
-// 5. Files & Attachments Preview Tab (Phase 6 Teaser)
-// -----------------------------------------------------------------------------
-class _FilesPlaceholderTab extends StatelessWidget {
-  const _FilesPlaceholderTab({required this.project});
 
-  final ProjectItem project;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: AppColors.cardShadow,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.folder_open_outlined, size: 44, color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Phase 6: Project Files & Document Storage',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Upload project briefs, design assets, client contracts, and export reports for "${project.name}". File attachment storage and version control will arrive in Phase 6.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceHover,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 14,
-                      alignment: WrapAlignment.spaceEvenly,
-                      children: [
-                        _featurePill('File Versioning', Icons.history_toggle_off),
-                        _featurePill('Secure Storage', Icons.cloud_upload_outlined),
-                        _featurePill('Role Access', Icons.verified_user_outlined),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _featurePill(String title, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(height: 6),
-        Text(
-          title,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-        ),
-      ],
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// 6. Project Discussions Preview Tab (Phase 6 Teaser)
-// -----------------------------------------------------------------------------
-class _DiscussionsPlaceholderTab extends StatelessWidget {
-  const _DiscussionsPlaceholderTab({required this.project});
-
-  final ProjectItem project;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: AppColors.cardShadow,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.forum_outlined, size: 44, color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Phase 6: Project Discussions & Team Chat',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Collaborate in real-time with team threads, mention teammates (@user), and pin critical updates for "${project.name}". Discussion channels will launch in Phase 6.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceHover,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 14,
-                      alignment: WrapAlignment.spaceEvenly,
-                      children: [
-                        _featurePill('Threaded Topics', Icons.chat_bubble_outline),
-                        _featurePill('Mentions & Alerts', Icons.alternate_email),
-                        _featurePill('Pinned Notices', Icons.push_pin_outlined),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _featurePill(String title, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(height: 6),
-        Text(
-          title,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-        ),
-      ],
-    );
-  }
-}

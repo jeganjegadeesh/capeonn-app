@@ -10,6 +10,10 @@ import '../../application/tasks_providers.dart';
 import 'task_status_dialog.dart';
 import 'task_form_dialog.dart';
 import 'manual_time_dialog.dart';
+import 'dart:convert';
+import '../../../projects/application/project_files_controller.dart';
+import '../../../projects/data/project_files_repository.dart';
+
 
 class TaskDetailDialog extends ConsumerStatefulWidget {
   const TaskDetailDialog({
@@ -945,81 +949,168 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
   }
 
   Widget _buildAttachmentsPlaceholderTab(BuildContext context, TaskDetail detail) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+    final filesAsync = ref.watch(projectFilesProvider(detail.task.projectId));
+
+    return filesAsync.when(
+      data: (allFiles) {
+        final taskFiles = allFiles.where((f) => f.taskId == detail.task.id).toList();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.cloud_upload_outlined, size: 36, color: Color(0xFF0284C7)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Deliverables & Attachments (${taskFiles.length})',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.upload_file, size: 16),
+                    label: const Text('Add File'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => _showTaskFileUploadDialog(context, detail),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              Text(
-                'Task Deliverables & Attachments',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+              if (taskFiles.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.cloud_upload_outlined, size: 48, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No files attached to this task yet',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Upload test evidence, wireframes, PR links, or specifications.',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: taskFiles.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final file = taskFiles[index];
+                    return Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: AppColors.border),
+                      ),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFFE0F2FE),
+                          child: Icon(Icons.insert_drive_file, color: Color(0xFF0284C7), size: 20),
+                        ),
+                        title: Text(file.fileName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: Text('${file.formattedSize} • Uploaded by ${file.uploaderName}', style: const TextStyle(fontSize: 12)),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.download, size: 20),
+                          tooltip: 'Download',
+                          onPressed: () => AppToast.success(context, 'Downloading ${file.fileName}...'),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Upload test evidence, wireframes, documentation, and pull request links directly to this task.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Failed to load files: $err', style: const TextStyle(color: AppColors.rose))),
+    );
+  }
+
+  void _showTaskFileUploadDialog(BuildContext context, TaskDetail detail) {
+    final nameController = TextEditingController();
+    final descController = TextEditingController();
+    bool isUploading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Attach Task File'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'File Name *',
+                  hintText: 'e.g. test_results.pdf',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               ),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
-                ),
-                child: const Text(
-                  'Scheduled for Phase 6 File Storage',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0284C7),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Mock upload box preview
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHover,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.file_upload_outlined, size: 28, color: AppColors.textMuted),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Drag & drop files or click to upload',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'PDF, PNG, JPG, ZIP up to 25MB',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                    ),
-                  ],
+              TextField(
+                controller: descController,
+                decoration: InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'Brief note on this deliverable...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ],
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      final fname = nameController.text.trim();
+                      if (fname.isEmpty) return;
+
+                      setDialogState(() => isUploading = true);
+                      try {
+                        final repo = ref.read(projectFilesRepositoryProvider);
+                        final dummyContent = utf8.encode('Task Deliverable: $fname\nTask: ${detail.task.title}');
+
+                        await repo.uploadProjectFile(
+                          detail.task.projectId,
+                          fileBytes: dummyContent,
+                          fileName: fname,
+                          category: 'document',
+                          taskId: detail.task.id,
+                          description: descController.text.trim().isNotEmpty ? descController.text.trim() : null,
+                        );
+
+                        ref.invalidate(projectFilesProvider(detail.task.projectId));
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          AppToast.success(context, 'File attached to task successfully');
+                        }
+                      } catch (e) {
+                        setDialogState(() => isUploading = false);
+                        if (context.mounted) {
+                          AppToast.error(context, 'Failed to attach file: $e');
+                        }
+                      }
+                    },
+              child: Text(isUploading ? 'Uploading...' : 'Attach File'),
+            ),
+          ],
         ),
       ),
     );

@@ -26,6 +26,8 @@ import '../../features/admin_system/presentation/audit_logs_page.dart';
 import '../../features/projects/presentation/projects_page.dart';
 import '../../features/projects/presentation/project_workspace_page.dart';
 import '../../features/tasks/presentation/my_tasks_page.dart';
+import '../../features/chat/presentation/conversations_page.dart';
+import '../../features/chat/presentation/chat_room_page.dart';
 
 const _publicRoutes = {'/login', '/forgot-password', '/reset-password'};
 
@@ -108,6 +110,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(path: '/tasks', builder: (_, _) => const MyTasksPage()),
+          GoRoute(path: '/chat', builder: (_, _) => const ConversationsPage()),
+          GoRoute(
+            path: '/chat/:id',
+            builder: (_, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              return ChatRoomPage(conversationId: id);
+            },
+          ),
           GoRoute(path: '/change-password', builder: (_, _) => const ChangePasswordPage()),
         ],
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:capeonn_app/core/network/api_exception.dart';
 import 'package:capeonn_app/core/theme/app_theme.dart';
 import 'package:capeonn_app/core/widgets/app_toast.dart';
 

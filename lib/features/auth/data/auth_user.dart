@@ -114,6 +114,8 @@ class AuthUser {
   bool get canViewTime => can('time.view');
   bool get canTrackTime => can('time.track');
 
+  bool get canUseChat => can('chat.use');
+
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     String? nameOf(dynamic value) => value is Map ? value['name'] as String? : null;
     int? idOf(dynamic value) => value is Map ? (value['id'] as num?)?.toInt() : null;

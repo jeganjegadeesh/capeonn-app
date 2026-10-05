@@ -146,6 +146,15 @@ class AppShell extends ConsumerWidget {
       ));
     }
 
+    if (user.canUseChat) {
+      list.add(const _NavItem(
+        title: 'Chat',
+        icon: Icons.chat_bubble_outline,
+        activeIcon: Icons.chat_bubble,
+        route: '/chat',
+      ));
+    }
+
     // Attendance & Leaves are strictly hidden for Super Admin
     if (user.canAccessAttendance && (user.canViewAttendance || user.canRecordAttendance)) {
       list.add(const _NavItem(title: 'Attendance', icon: Icons.access_time_outlined, activeIcon: Icons.access_time_filled, route: '/attendance'));
@@ -183,6 +192,7 @@ class AppShell extends ConsumerWidget {
   String _titleForRoute(String route) {
     if (route.startsWith('/projects')) return 'Projects';
     if (route.startsWith('/tasks')) return 'My Tasks';
+    if (route.startsWith('/chat')) return 'Internal Chat';
     if (route.startsWith('/attendance')) return 'Attendance';
     if (route.startsWith('/leaves')) return 'Leaves';
     if (route.startsWith('/holidays')) return 'Holiday Calendar';
