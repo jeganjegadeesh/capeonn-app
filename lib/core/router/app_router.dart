@@ -25,6 +25,7 @@ import '../../features/admin_system/presentation/system_settings_page.dart';
 import '../../features/admin_system/presentation/audit_logs_page.dart';
 import '../../features/projects/presentation/projects_page.dart';
 import '../../features/projects/presentation/project_workspace_page.dart';
+import '../../features/tasks/presentation/my_tasks_page.dart';
 
 const _publicRoutes = {'/login', '/forgot-password', '/reset-password'};
 
@@ -106,6 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               return ProjectWorkspacePage(projectId: id);
             },
           ),
+          GoRoute(path: '/tasks', builder: (_, _) => const MyTasksPage()),
           GoRoute(path: '/change-password', builder: (_, _) => const ChangePasswordPage()),
         ],
       ),

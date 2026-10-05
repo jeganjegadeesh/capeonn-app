@@ -7,6 +7,24 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Suppress known upstream Flutter Windows Alt-key / platform message assertions
+  // that occur when Alt/Alt+Tab is pressed during window focus transitions.
+  final originalOnError = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final message = details.exception.toString();
+    if (message.contains('RawKeyDownEvent') ||
+        message.contains('_keysPressed.isNotEmpty')) {
+      return; // Ignore transient platform key assertion on Windows
+    }
+    if (originalOnError != null) {
+      originalOnError(details);
+    } else {
+      FlutterError.presentError(details);
+    }
+  };
+
   // Clean web URLs (/reset-password?token=...) instead of /#/reset-password,
   // so the link in the password-reset email opens the right screen.
   usePathUrlStrategy();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../organization/application/organization_controller.dart';
 import '../application/projects_controller.dart';
@@ -912,9 +913,7 @@ class _ProjectCard extends ConsumerWidget {
                               await ref.read(projectsControllerProvider).deleteProject(project.id);
                             } catch (e) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Cannot delete: $e')),
-                                );
+                                AppToast.error(context, e);
                               }
                             }
                           }
@@ -982,29 +981,58 @@ class _ProjectCard extends ConsumerWidget {
 
               const SizedBox(height: 12),
 
-              // Phase 5 Task Metrics Placeholder Container
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHover,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Task metrics in Phase 5',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              // Task Metrics & Dynamic Progress
+              if (project.taskMetricsAvailable && project.taskMetrics != null && project.taskMetrics!.totalTasks > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 13, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${project.taskMetrics!.completedTasks}/${project.taskMetrics!.totalTasks} tasks (${project.progress}%)',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (project.taskMetrics!.overdueTasks > 0)
+                        Text(
+                          '${project.taskMetrics!.overdueTasks} overdue',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.rose),
+                        ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHover,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.checklist_rtl, size: 13, color: AppColors.textMuted),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'No tasks created yet',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
               const Spacer(),
               const Divider(height: 1),
@@ -1386,32 +1414,56 @@ class _ProjectListItem extends StatelessWidget {
                 ),
               ),
 
-              // Phase 5 Task Metrics Placeholder
+              // Task Metrics Display
               Expanded(
                 flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceHover,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.info_outline, size: 12, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          'Task metrics in Phase 5',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                child: (project.taskMetricsAvailable && project.taskMetrics != null && project.taskMetrics!.totalTasks > 0)
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryContainer,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_outline, size: 12, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                '${project.taskMetrics!.completedTasks}/${project.taskMetrics!.totalTasks} tasks (${project.progress}%)',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHover,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.checklist_rtl, size: 12, color: AppColors.textMuted),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'No tasks yet',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
               ),
               const SizedBox(width: 16),
 

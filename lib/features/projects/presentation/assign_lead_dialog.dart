@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_toast.dart';
+import '../../../core/network/api_exception.dart';
 import '../../employees/application/employee_controller.dart';
 import '../application/projects_controller.dart';
 
@@ -54,17 +56,12 @@ class _AssignLeadDialogState extends ConsumerState<AssignLeadDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Team Lead updated successfully'),
-            backgroundColor: AppColors.emerald,
-          ),
-        );
+        AppToast.success(context, 'Team Lead updated successfully');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _errorMessage = ApiException.cleanMessage(e);
           _isSaving = false;
         });
       }

@@ -62,4 +62,32 @@ void main() {
     expect(e.statusCode, 500);
     expect(e.message, isNotEmpty);
   });
+
+  test('ApiException.toString() returns displayMessage without prefixes', () {
+    final e = ApiException('Status transition from \'in_progress\' to \'completed\' is not permitted', statusCode: 422);
+
+    expect(e.toString(), 'Status transition from \'in_progress\' to \'completed\' is not permitted');
+    expect(e.toString(), isNot(contains('ApiException(422):')));
+  });
+
+  test('ApiException.cleanMessage removes Unhandled Exception and ApiException prefixes', () {
+    const raw = "Unhandled Exception: ApiException(422): Status transition from 'in_progress' to 'completed' is not permitted";
+    final cleaned = ApiException.cleanMessage(raw);
+
+    expect(cleaned, "Status transition from 'in_progress' to 'completed' is not permitted");
+  });
+
+  test('ApiException.cleanMessage handles ApiException instances directly', () {
+    final e = ApiException('Custom user error', statusCode: 400);
+    final cleaned = ApiException.cleanMessage(e);
+
+    expect(cleaned, 'Custom user error');
+  });
+
+  test('ApiException.cleanMessage handles Exception: and Error: prefixes', () {
+    expect(ApiException.cleanMessage('Exception: Something failed'), 'Something failed');
+    expect(ApiException.cleanMessage('Error: Server is unreachable'), 'Server is unreachable');
+    expect(ApiException.cleanMessage(null), '');
+  });
 }
+

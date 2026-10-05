@@ -13,6 +13,7 @@ class AuthUser {
     this.isAttendanceApplicable = true,
     this.salary,
     this.companyName,
+    this.departmentId,
     this.departmentName,
     this.designationName,
     this.reportsToName,
@@ -42,6 +43,7 @@ class AuthUser {
   final int roleLevel;
 
   final String? companyName;
+  final int? departmentId;
   final String? departmentName;
   final String? designationName;
   final String? reportsToName;
@@ -106,8 +108,15 @@ class AuthUser {
   bool get canViewProjectActivities => can('projects.activity');
   bool get canChangeProjectStatus => can('projects.status');
 
+  bool get canViewTasks => can('tasks.view');
+  bool get canManageTasks => can('tasks.manage');
+  bool get canUpdateTasks => can('tasks.update');
+  bool get canViewTime => can('time.view');
+  bool get canTrackTime => can('time.track');
+
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     String? nameOf(dynamic value) => value is Map ? value['name'] as String? : null;
+    int? idOf(dynamic value) => value is Map ? (value['id'] as num?)?.toInt() : null;
 
     final role = json['role'] is Map ? json['role'] as Map : const {};
     final permissions = <String, String>{};
@@ -139,6 +148,7 @@ class AuthUser {
       roleName: role['name'] as String? ?? '',
       roleLevel: (role['level'] as num?)?.toInt() ?? 0,
       companyName: nameOf(json['company']),
+      departmentId: idOf(json['department']),
       departmentName: nameOf(json['department']),
       designationName: nameOf(json['designation']),
       reportsToName: nameOf(json['reports_to']),

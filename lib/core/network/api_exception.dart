@@ -13,6 +13,7 @@ class ApiException implements Exception {
 
   bool get isUnauthorized => statusCode == 401;
   bool get isForbidden => statusCode == 403;
+  bool get isNotFound => statusCode == 404;
   bool get isValidation => statusCode == 422;
 
   String? fieldError(String field) {
@@ -24,6 +25,12 @@ class ApiException implements Exception {
   String get displayMessage {
     if (isForbidden) {
       return message.isNotEmpty ? message : "You don't have permission to perform this action.";
+    }
+    if (isNotFound) {
+      return message.isNotEmpty ? message : 'The requested resource was not found.';
+    }
+    if (isUnauthorized) {
+      return message.isNotEmpty ? message : 'Your session has expired. Please sign in again.';
     }
     for (final messages in errors.values) {
       if (messages.isNotEmpty) return messages.first;
@@ -48,9 +55,13 @@ class ApiException implements Exception {
           }
         });
       }
-      final fallbackMessage = response.statusCode == 403
-          ? "You don't have permission to perform this action."
-          : 'Something went wrong.';
+      final fallbackMessage = switch (response.statusCode) {
+        403 => "You don't have permission to perform this action.",
+        404 => 'The requested resource was not found.',
+        401 => 'Your session has expired. Please sign in again.',
+        422 => 'Please review the highlighted fields.',
+        _ => 'Something went wrong.',
+      };
       return ApiException(
         rawMessage is String && rawMessage.isNotEmpty ? rawMessage : fallbackMessage,
         statusCode: response.statusCode,
@@ -75,6 +86,30 @@ class ApiException implements Exception {
     }
   }
 
+  /// Returns a clean, user-friendly error message stripped of system/framework
+  /// prefixes like "Unhandled Exception:", "ApiException(422):", "Exception:", etc.
+  static String cleanMessage(dynamic error) {
+    if (error == null) return '';
+    if (error is ApiException) {
+      return error.displayMessage;
+    }
+    String msg = error.toString().trim();
+    // Recursively strip common exception wrappers/prefixes
+    bool changed = true;
+    while (changed) {
+      final prev = msg;
+      msg = msg
+          .replaceFirst(RegExp(r'^Unhandled Exception:\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'^ApiException(\(\d+\))?:\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'^Exception:\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'^Error:\s*', caseSensitive: false), '')
+          .trim();
+      changed = (prev != msg);
+    }
+    return msg.isNotEmpty ? msg : 'An unexpected error occurred.';
+  }
+
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() => displayMessage;
 }
+

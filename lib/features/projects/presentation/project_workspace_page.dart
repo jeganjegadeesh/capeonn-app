@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/projects_controller.dart';
 import '../data/project_models.dart';
 import 'add_project_member_dialog.dart';
 import 'assign_lead_dialog.dart';
 import 'project_form_dialog.dart';
+import '../../tasks/presentation/project_tasks_tab.dart';
 
 class ProjectWorkspacePage extends ConsumerStatefulWidget {
   const ProjectWorkspacePage({super.key, required this.projectId});
@@ -193,8 +195,8 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                 // 3. Activity History Tab
                 _ActivityHistoryTab(activities: detail.activities),
 
-                // 4. Tasks & Milestones Preview Tab (Phase 5)
-                _TasksPreviewTab(project: p),
+                // 4. Tasks & Milestones Tab (Phase 5)
+                ProjectTasksTab(project: p, members: detail.members),
 
                 // 5. Files & Attachments Preview Tab (Phase 6)
                 _FilesPlaceholderTab(project: p),
@@ -661,32 +663,68 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                 ),
               ),
 
-              // Phase 5 Progress Metrics Placeholder Container
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHover,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 6),
-                    Text(
-                      isDesktop
-                          ? 'Task progress metrics will be available in Phase 5'
-                          : 'Task metrics in Phase 5',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                        color: AppColors.textSecondary,
+              // Task Metrics & Dynamic Progress
+              if (p.taskMetricsAvailable && p.taskMetrics != null && p.taskMetrics!.totalTasks > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${p.taskMetrics!.completedTasks}/${p.taskMetrics!.totalTasks} tasks (${p.progress}%)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (p.taskMetrics!.overdueTasks > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.roseContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${p.taskMetrics!.overdueTasks} overdue',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.rose),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHover,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.checklist_rtl, size: 14, color: AppColors.textMuted),
+                      const SizedBox(width: 6),
+                      Text(
+                        'No tasks created yet',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -706,9 +744,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
 
     final nextOptions = allowedTransitions[p.status] ?? [];
     if (nextOptions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No further status transitions available for "${p.statusDisplay}".')),
-      );
+      AppToast.warning(context, 'No further status transitions available for "${p.statusDisplay}".');
       return;
     }
 
@@ -778,9 +814,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                   onPressed: () async {
                     final reason = reasonCtrl.text.trim();
                     if (isReasonRequired && reason.isEmpty) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('A reason is required for this status change.')),
-                      );
+                      AppToast.warning(ctx, 'A reason is required for this status change.');
                       return;
                     }
                     Navigator.pop(ctx);
@@ -792,9 +826,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                           );
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to update status: $e')),
-                        );
+                        AppToast.error(context, e);
                       }
                     }
                   },
@@ -852,9 +884,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                     );
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to request completion: $e')),
-                  );
+                  AppToast.error(context, e);
                 }
               }
             },
@@ -904,9 +934,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
             onPressed: () async {
               final reason = reasonCtrl.text.trim();
               if (reason.isEmpty) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Please provide a rejection reason.')),
-                );
+                AppToast.warning(ctx, 'Please provide a rejection reason.');
                 return;
               }
               Navigator.pop(ctx);
@@ -914,9 +942,7 @@ class _ProjectWorkspacePageState extends ConsumerState<ProjectWorkspacePage>
                 await ref.read(projectsControllerProvider).rejectCompletion(p.id, reason: reason);
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to reject completion: $e')),
-                  );
+                  AppToast.error(context, e);
                 }
               }
             },
@@ -1779,101 +1805,7 @@ class _ActivityHistoryTab extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// 4. Tasks & Milestones Preview Tab (Phase 5 Teaser)
-// -----------------------------------------------------------------------------
-class _TasksPreviewTab extends StatelessWidget {
-  const _TasksPreviewTab({required this.project});
-
-  final ProjectItem project;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: AppColors.cardShadow,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_circle_outline, size: 44, color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Phase 5: Task Management & Time Tracking',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Project "${project.name}" is fully initialized! Team Leads can break down this project into tasks, subtasks, set priorities, and track start/stop timers in the upcoming Phase 5 sprint.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceHover,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 14,
-                      alignment: WrapAlignment.spaceEvenly,
-                      children: [
-                        _featurePill('Create Tasks & Subtasks', Icons.checklist),
-                        _featurePill('Assign to Members', Icons.person_search),
-                        _featurePill('Time Tracking Timers', Icons.timer_outlined),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _featurePill(String title, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(height: 6),
-        Text(
-          title,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-        ),
-      ],
-    );
-  }
-}
+// 4. Tasks & Milestones Tab (handled by ProjectTasksTab)
 
 // -----------------------------------------------------------------------------
 // 5. Files & Attachments Preview Tab (Phase 6 Teaser)

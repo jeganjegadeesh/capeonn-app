@@ -235,7 +235,19 @@ class AppTheme {
           ),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.white,
+        contentTextStyle: const TextStyle(color: textPrimaryColor, fontSize: 13, fontWeight: FontWeight.w500),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: borderColor, width: 1),
+        ),
+        elevation: 6,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
     );
+
   }
 
   /// Luxury, sleek Obsidian Dark Theme (Linear / Vercel aesthetic)
@@ -352,6 +364,18 @@ class AppTheme {
           ),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: surfaceColor,
+        contentTextStyle: const TextStyle(color: textPrimaryColor, fontSize: 13, fontWeight: FontWeight.w500),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: borderColor, width: 1),
+        ),
+        elevation: 6,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
     );
+
   }
 }

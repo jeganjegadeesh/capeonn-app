@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/auth_user.dart';
+import '../../tasks/presentation/widgets/active_timer_banner.dart';
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
@@ -107,9 +108,16 @@ class AppShell extends ConsumerWidget {
           ),
         ),
       ),
-      body: KeyedSubtree(
-        key: ValueKey('page_${location}_${themeMode.name}'),
-        child: child,
+      body: Column(
+        children: [
+          const ActiveTimerBanner(),
+          Expanded(
+            child: KeyedSubtree(
+              key: ValueKey('page_${location}_${themeMode.name}'),
+              child: child,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomBar(context, location, navItems),
     );
@@ -126,6 +134,15 @@ class AppShell extends ConsumerWidget {
         icon: Icons.folder_special_outlined,
         activeIcon: Icons.folder_special,
         route: '/projects',
+      ));
+    }
+
+    if (user.canViewTasks) {
+      list.add(const _NavItem(
+        title: 'Tasks',
+        icon: Icons.check_circle_outline,
+        activeIcon: Icons.check_circle,
+        route: '/tasks',
       ));
     }
 
@@ -165,6 +182,7 @@ class AppShell extends ConsumerWidget {
 
   String _titleForRoute(String route) {
     if (route.startsWith('/projects')) return 'Projects';
+    if (route.startsWith('/tasks')) return 'My Tasks';
     if (route.startsWith('/attendance')) return 'Attendance';
     if (route.startsWith('/leaves')) return 'Leaves';
     if (route.startsWith('/holidays')) return 'Holiday Calendar';

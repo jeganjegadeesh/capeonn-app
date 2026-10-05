@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../tasks/data/task_models.dart';
 
 class ProjectItem {
   const ProjectItem({
@@ -11,6 +12,7 @@ class ProjectItem {
     this.priority = 'medium',
     this.progress,
     this.taskMetricsAvailable = false,
+    this.taskMetrics,
     this.healthLabel = 'on_track',
     this.startDate,
     this.deadline,
@@ -47,6 +49,7 @@ class ProjectItem {
   final String priority;
   final int? progress;
   final bool taskMetricsAvailable;
+  final TaskMetrics? taskMetrics;
   final String healthLabel;
   final String? startDate;
   final String? deadline;
@@ -215,6 +218,11 @@ class ProjectItem {
       priority: json['priority'] as String? ?? 'medium',
       progress: (json['progress'] as num?)?.toInt(),
       taskMetricsAvailable: json['task_metrics_available'] as bool? ?? false,
+      taskMetrics: json['task_metrics'] is Map<String, dynamic>
+          ? TaskMetrics.fromJson(json['task_metrics'] as Map<String, dynamic>)
+          : (json['task_metrics'] is Map
+              ? TaskMetrics.fromJson(Map<String, dynamic>.from(json['task_metrics'] as Map))
+              : null),
       healthLabel: json['health_label'] as String? ?? 'on_track',
       startDate: json['start_date'] as String?,
       deadline: json['deadline'] as String?,

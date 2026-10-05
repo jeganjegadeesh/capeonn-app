@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_toast.dart';
+import '../../../core/network/api_exception.dart';
 import '../../employees/application/employee_controller.dart';
 import '../application/projects_controller.dart';
 
@@ -78,26 +80,19 @@ class _AddProjectMemberDialogState extends ConsumerState<AddProjectMemberDialog>
         Navigator.of(context).pop(true);
         if (res.warnings.isNotEmpty) {
           final warningMsg = res.warnings.join('\n');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Member added with warnings:\n$warningMsg'),
-              backgroundColor: AppColors.amber,
-              duration: const Duration(seconds: 5),
-            ),
+          AppToast.warning(
+            context,
+            'Member added with warnings:\n$warningMsg',
+            duration: const Duration(seconds: 6),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Member added to project team'),
-              backgroundColor: AppColors.emerald,
-            ),
-          );
+          AppToast.success(context, 'Member added to project team');
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _errorMessage = ApiException.cleanMessage(e);
           _isSaving = false;
         });
       }
