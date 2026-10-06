@@ -59,6 +59,12 @@ class AppConfig {
   // WEBSOCKET CONFIGURATION (Pusher / Soketi)
   // ===========================================================================
 
+  /// Enable or disable WebSocket real-time transport.
+  /// When true, attempts connection to wsHost:wsPort.
+  /// If the WebSocket daemon is not running or unreachable, the app seamlessly
+  /// falls back to automatic HTTP polling without errors or disruption.
+  static const bool wsEnabled = true;
+
   /// WebSocket host (10.0.2.2 on Android emulator, 127.0.0.1 on Web / Desktop)
   static String get wsHost {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {

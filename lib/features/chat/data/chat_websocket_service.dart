@@ -106,7 +106,10 @@ class ChatWebSocketService {
 
   final Map<int, _ConversationSubscriptions> _activeChannels = {};
   final Map<int, _ConversationSubscriptions> _companyChannels = {};
+  final Map<int, String> _pendingConversationTokens = {};
+  final Map<int, String> _pendingCompanyTokens = {};
 
+  DateTime? _lastErrorLogTime;
   StreamSubscription<dynamic>? _lifecycleSub;
 
   WebSocketStatus get status => _status;
@@ -132,6 +135,11 @@ class ChatWebSocketService {
     String? scheme,
     String? key,
   }) async {
+    if (!AppConfig.wsEnabled) {
+      _setStatus(WebSocketStatus.disconnected);
+      return;
+    }
+
     if (_status == WebSocketStatus.connected ||
         _status == WebSocketStatus.connecting) {
       return;
@@ -155,17 +163,31 @@ class ChatWebSocketService {
       _client = PusherChannelsClient.websocket(
         options: options,
         connectionErrorHandler: (error, trace, refresh) {
-          debugPrint('WebSocket error: $error');
-          _setStatus(WebSocketStatus.error);
+          _setStatus(WebSocketStatus.disconnected);
+
+          final now = DateTime.now();
+          if (_lastErrorLogTime == null ||
+              now.difference(_lastErrorLogTime!).inSeconds > 30) {
+            _lastErrorLogTime = now;
+            final errStr = error.toString();
+            if (errStr.contains('1225') ||
+                errStr.contains('refused') ||
+                errStr.contains('SocketException')) {
+              debugPrint(
+                  '[WebSocket] Local server at $wsHost:$wsPort is not running (connection refused). Seamlessly operating in HTTP polling fallback mode.');
+            } else {
+              debugPrint('[WebSocket] Notice: $error');
+            }
+          }
         },
       );
 
       _lifecycleSub?.cancel();
       _lifecycleSub = _client!.lifecycleStream.listen((event) {
-        // Lifecycle events reflect state changes
         final eventStr = event.toString().toLowerCase();
         if (eventStr.contains('connected') || eventStr.contains('established')) {
           _setStatus(WebSocketStatus.connected);
+          _resubscribePendingChannels();
         } else if (eventStr.contains('disconnect') || eventStr.contains('closed')) {
           _setStatus(WebSocketStatus.disconnected);
         } else if (eventStr.contains('reconnecting')) {
@@ -174,16 +196,26 @@ class ChatWebSocketService {
       });
 
       _client!.connect();
-      // Assume connected once connect() initiates without throwing
-      _setStatus(WebSocketStatus.connected);
     } catch (e) {
-      debugPrint('Failed to connect to WebSocket: $e');
-      _setStatus(WebSocketStatus.error);
+      debugPrint('[WebSocket] Connect exception: $e');
+      _setStatus(WebSocketStatus.disconnected);
     }
   }
 
   /// Subscribe to a private conversation channel for real-time events
   void subscribeConversation(
+    int conversationId, {
+    required String authToken,
+    String? authEndpoint,
+  }) {
+    _pendingConversationTokens[conversationId] = authToken;
+    if (_client == null || _status != WebSocketStatus.connected) {
+      return;
+    }
+    _doSubscribeConversation(conversationId, authToken: authToken, authEndpoint: authEndpoint);
+  }
+
+  void _doSubscribeConversation(
     int conversationId, {
     required String authToken,
     String? authEndpoint,
@@ -271,6 +303,7 @@ class ChatWebSocketService {
 
   /// Unsubscribe from a conversation channel
   Future<void> unsubscribeConversation(int conversationId) async {
+    _pendingConversationTokens.remove(conversationId);
     final entry = _activeChannels.remove(conversationId);
     if (entry != null) {
       await entry.cancelAll();
@@ -279,6 +312,18 @@ class ChatWebSocketService {
 
   /// Subscribe to company-wide channel for presence heartbeat updates
   void subscribeCompany(
+    int companyId, {
+    required String authToken,
+    String? authEndpoint,
+  }) {
+    _pendingCompanyTokens[companyId] = authToken;
+    if (_client == null || _status != WebSocketStatus.connected) {
+      return;
+    }
+    _doSubscribeCompany(companyId, authToken: authToken, authEndpoint: authEndpoint);
+  }
+
+  void _doSubscribeCompany(
     int companyId, {
     required String authToken,
     String? authEndpoint,
@@ -331,8 +376,19 @@ class ChatWebSocketService {
     }
   }
 
+  /// Re-subscribe all pending channels upon connection
+  void _resubscribePendingChannels() {
+    for (final entry in _pendingConversationTokens.entries) {
+      _doSubscribeConversation(entry.key, authToken: entry.value);
+    }
+    for (final entry in _pendingCompanyTokens.entries) {
+      _doSubscribeCompany(entry.key, authToken: entry.value);
+    }
+  }
+
   /// Unsubscribe from company channel
   Future<void> unsubscribeCompany(int companyId) async {
+    _pendingCompanyTokens.remove(companyId);
     final entry = _companyChannels.remove(companyId);
     if (entry != null) {
       await entry.cancelAll();
