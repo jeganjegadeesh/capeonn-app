@@ -746,14 +746,35 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          conv.isDirect
-                              ? 'Direct Chat • Tap for details'
-                              : conv.isGroup
-                                  ? '${conv.participants.length} members • Tap for details'
-                                  : 'Project Discussion • Tap for details',
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
+                        if (state.isPartnerTyping)
+                          Row(
+                            children: [
+                              Text(
+                                '${state.partnerTypingName ?? "Someone"} is typing',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                  color: AppColors.emerald,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const SizedBox(
+                                width: 8,
+                                height: 8,
+                                child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.emerald),
+                              ),
+                            ],
+                          )
+                        else
+                          Text(
+                            conv.isDirect
+                                ? 'Direct Chat • Tap for details'
+                                : conv.isGroup
+                                    ? '${conv.participants.length} members • Tap for details'
+                                    : 'Project Discussion • Tap for details',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
                       ],
                     ),
                   ),
@@ -964,6 +985,35 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                       onTap: () => _insertMention(p),
                     );
                   },
+                ),
+              ),
+
+            // Live Partner Typing Banner
+            if (state.isPartnerTyping)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald.withValues(alpha: 0.08),
+                  border: Border(top: BorderSide(color: AppColors.emerald.withValues(alpha: 0.2))),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.emerald),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${state.partnerTypingName ?? "Someone"} is typing...',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.emerald,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

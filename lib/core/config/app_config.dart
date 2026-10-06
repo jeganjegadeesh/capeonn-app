@@ -31,4 +31,28 @@ class AppConfig {
 
   /// Sent as `device_name` on login so sessions can be told apart later.
   static String get deviceName => kIsWeb ? 'web' : defaultTargetPlatform.name;
+
+  // ===========================================================================
+  // WEBSOCKET CONFIGURATION (Pusher / Soketi)
+  // ===========================================================================
+
+  /// WebSocket host (10.0.2.2 on Android emulator, 127.0.0.1 on Web / Desktop)
+  static String get wsHost {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return '10.0.2.2';
+    }
+    return '127.0.0.1';
+  }
+
+  /// WebSocket port (default Soketi/Pusher port is 6001)
+  static const int wsPort = 6001;
+
+  /// WebSocket scheme ('ws' or 'wss')
+  static const String wsScheme = 'ws';
+
+  /// Pusher/Soketi application key
+  static const String wsKey = 'capeonn-app-key';
+
+  /// Channel authorization endpoint
+  static String get wsAuthUrl => '$apiBaseUrl/broadcasting/auth';
 }

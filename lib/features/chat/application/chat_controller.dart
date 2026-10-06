@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/chat_models.dart';
 import '../data/chat_repository.dart';
+import '../data/chat_websocket_service.dart';
+import '../../../core/network/api_client.dart';
 
 /// Filter state for conversations list
 class ConversationsFilter {
@@ -108,12 +110,16 @@ class ChatRoomState {
   }
 }
 
-/// Active chat room notifier with polling sync
+/// Active chat room notifier with dual-mode real-time sync (WebSocket primary + fallback polling)
 class ChatRoomNotifier extends AsyncNotifier<ChatRoomState> {
   ChatRoomNotifier(this.conversationId);
 
   final int conversationId;
   Timer? _pollingTimer;
+  StreamSubscription<ChatMessageModel>? _wsMessageSub;
+  StreamSubscription<ChatUserTypingData>? _wsTypingSub;
+  StreamSubscription<ChatMessageReadData>? _wsReadSub;
+  Timer? _typingResetTimer;
 
   @override
   Future<ChatRoomState> build() async {
@@ -121,10 +127,22 @@ class ChatRoomNotifier extends AsyncNotifier<ChatRoomState> {
     final conv = await repo.getConversation(conversationId);
     final messages = await repo.getMessages(conversationId, perPage: 40);
 
-    // Setup real-time polling sync every 3 seconds while in chat room
+    // 1. Dual-mode sync: Fallback polling every 4 seconds in background
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) => _syncLatest());
-    ref.onDispose(() => _pollingTimer?.cancel());
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) => _syncLatest());
+
+    // 2. WebSocket real-time transport: Connect and subscribe to conversation
+    _initWebSocket();
+
+    ref.onDispose(() {
+      _pollingTimer?.cancel();
+      _typingResetTimer?.cancel();
+      _wsMessageSub?.cancel();
+      _wsTypingSub?.cancel();
+      _wsReadSub?.cancel();
+      final ws = ref.read(chatWebSocketServiceProvider);
+      unawaited(ws.unsubscribeConversation(conversationId));
+    });
 
     // Mark as read
     unawaited(repo.markAsRead(conversationId));
@@ -135,6 +153,93 @@ class ChatRoomNotifier extends AsyncNotifier<ChatRoomState> {
       messages: messages,
       hasMoreOlder: messages.length >= 40,
     );
+  }
+
+  Future<void> _initWebSocket() async {
+    try {
+      final token = await ref.read(tokenStorageProvider).read();
+      if (token == null || token.isEmpty) return;
+
+      final ws = ref.read(chatWebSocketServiceProvider);
+      await ws.connect(authToken: token);
+      ws.subscribeConversation(conversationId, authToken: token);
+
+      // Listen for real-time messages
+      _wsMessageSub?.cancel();
+      _wsMessageSub = ws.messageStream.listen((msg) {
+        if (msg.conversationId == conversationId) {
+          _handleIncomingMessage(msg);
+        }
+      });
+
+      // Listen for typing events
+      _wsTypingSub?.cancel();
+      _wsTypingSub = ws.typingStream.listen((typing) {
+        if (typing.conversationId == conversationId) {
+          _handleIncomingTyping(typing);
+        }
+      });
+
+      // Listen for read receipts
+      _wsReadSub?.cancel();
+      _wsReadSub = ws.readReceiptStream.listen((readReceipt) {
+        if (readReceipt.conversationId == conversationId) {
+          _handleIncomingReadReceipt(readReceipt);
+        }
+      });
+    } catch (_) {
+      // Gracefully fall back to background polling on connection issues
+    }
+  }
+
+  void _handleIncomingMessage(ChatMessageModel msg) {
+    final current = state.value;
+    if (current == null) return;
+    if (current.messages.any((m) => m.id == msg.id)) return;
+
+    final updated = <ChatMessageModel>[msg, ...current.messages];
+    state = AsyncData(current.copyWith(
+      messages: updated,
+      isPartnerTyping: false,
+    ));
+
+    final repo = ref.read(chatRepositoryProvider);
+    unawaited(repo.markAsRead(conversationId));
+    ref.invalidate(chatUnreadCountProvider);
+    ref.invalidate(conversationsListProvider);
+  }
+
+  void _handleIncomingTyping(ChatUserTypingData typing) {
+    final current = state.value;
+    if (current == null) return;
+
+    _typingResetTimer?.cancel();
+    if (typing.isTyping) {
+      state = AsyncData(current.copyWith(
+        isPartnerTyping: true,
+        partnerTypingName: typing.userName,
+      ));
+      // Auto-clear typing indicator after 3 seconds of inactivity
+      _typingResetTimer = Timer(const Duration(seconds: 3), () {
+        final s = state.value;
+        if (s != null && s.isPartnerTyping) {
+          state = AsyncData(s.copyWith(isPartnerTyping: false));
+        }
+      });
+    } else {
+      state = AsyncData(current.copyWith(isPartnerTyping: false));
+    }
+  }
+
+  void _handleIncomingReadReceipt(ChatMessageReadData receipt) {
+    ref.invalidate(chatUnreadCountProvider);
+  }
+
+  Future<void> sendTyping(bool isTyping) async {
+    try {
+      final repo = ref.read(chatRepositoryProvider);
+      await repo.sendTyping(conversationId, isTyping);
+    } catch (_) {}
   }
 
   Future<void> _syncLatest() async {
