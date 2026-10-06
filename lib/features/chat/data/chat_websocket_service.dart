@@ -101,8 +101,11 @@ class ChatWebSocketService {
       StreamController<ChatUserTypingData>.broadcast();
   final StreamController<ChatMessageReadData> _readReceiptController =
       StreamController<ChatMessageReadData>.broadcast();
+  final StreamController<UserPresenceModel> _presenceController =
+      StreamController<UserPresenceModel>.broadcast();
 
   final Map<int, _ConversationSubscriptions> _activeChannels = {};
+  final Map<int, _ConversationSubscriptions> _companyChannels = {};
 
   StreamSubscription<dynamic>? _lifecycleSub;
 
@@ -112,6 +115,7 @@ class ChatWebSocketService {
   Stream<ChatUserTypingData> get typingStream => _typingController.stream;
   Stream<ChatMessageReadData> get readReceiptStream =>
       _readReceiptController.stream;
+  Stream<UserPresenceModel> get presenceStream => _presenceController.stream;
 
   void _setStatus(WebSocketStatus newStatus) {
     if (_status != newStatus) {
@@ -273,12 +277,79 @@ class ChatWebSocketService {
     }
   }
 
+  /// Subscribe to company-wide channel for presence heartbeat updates
+  void subscribeCompany(
+    int companyId, {
+    required String authToken,
+    String? authEndpoint,
+  }) {
+    if (_client == null || _companyChannels.containsKey(companyId)) {
+      return;
+    }
+
+    try {
+      final endpoint = authEndpoint ?? AppConfig.wsAuthUrl;
+      final channelName = 'private-company.$companyId';
+
+      final channel = _client!.privateChannel(
+        channelName,
+        authorizationDelegate:
+            EndpointAuthorizableChannelTokenAuthorizationDelegate.forPrivateChannel(
+          authorizationEndpoint: Uri.parse(endpoint),
+          headers: {
+            'Authorization': 'Bearer $authToken',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      final subs = <StreamSubscription<dynamic>>[];
+
+      // Bind user.presence
+      final presenceBind = channel.bind('user.presence');
+      final presenceSub = presenceBind.listen((ChannelReadEvent event) {
+        try {
+          final map = _decodeData(event.data);
+          if (map != null) {
+            final presenceData = UserPresenceModel.fromJson(map);
+            _presenceController.add(presenceData);
+          }
+        } catch (e) {
+          debugPrint('Error parsing user.presence: $e');
+        }
+      });
+      subs.add(presenceSub);
+
+      channel.subscribeIfNotUnsubscribed();
+
+      _companyChannels[companyId] = _ConversationSubscriptions(
+        channel: channel,
+        subscriptions: subs,
+      );
+    } catch (e) {
+      debugPrint('Failed to subscribe to company channel $companyId: $e');
+    }
+  }
+
+  /// Unsubscribe from company channel
+  Future<void> unsubscribeCompany(int companyId) async {
+    final entry = _companyChannels.remove(companyId);
+    if (entry != null) {
+      await entry.cancelAll();
+    }
+  }
+
   /// Disconnect all channels and close client connection
   Future<void> disconnect() async {
     for (final entry in _activeChannels.values) {
       await entry.cancelAll();
     }
     _activeChannels.clear();
+
+    for (final entry in _companyChannels.values) {
+      await entry.cancelAll();
+    }
+    _companyChannels.clear();
 
     await _lifecycleSub?.cancel();
     _lifecycleSub = null;
@@ -317,6 +388,7 @@ class ChatWebSocketService {
     await _messageController.close();
     await _typingController.close();
     await _readReceiptController.close();
+    await _presenceController.close();
   }
 }
 

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/chat_controller.dart';
 import '../data/chat_models.dart';
+import '../application/presence_controller.dart';
+import '../../auth/application/auth_controller.dart';
 import 'widgets/new_direct_chat_dialog.dart';
 import 'widgets/new_group_chat_dialog.dart';
 
@@ -399,7 +401,7 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _ConversationCard extends StatelessWidget {
+class _ConversationCard extends ConsumerWidget {
   const _ConversationCard({required this.conversation});
 
   final ConversationModel conversation;
@@ -417,9 +419,17 @@ class _ConversationCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final hasUnread = conversation.unreadCount > 0;
+    final currentUser = ref.watch(authControllerProvider).value;
+    final presence = ref.watch(presenceProvider);
+
+    final partnerId = conversation.partnerId ??
+        (conversation.participants.where((p) => p.userId != currentUser?.id).firstOrNull?.userId);
+    final isPartnerOnline = conversation.isDirect && partnerId != null
+        ? (presence.isUserOnline(partnerId) || conversation.partnerIsOnline == true)
+        : false;
 
     IconData typeIcon;
     Color typeColor;
@@ -469,13 +479,16 @@ class _ConversationCard extends StatelessWidget {
               Positioned(
                 right: 0,
                 bottom: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
+                child: Tooltip(
+                  message: isPartnerOnline ? 'Online' : 'Offline',
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: isPartnerOnline ? AppColors.emerald : Colors.grey.shade400,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
+                    ),
                   ),
                 ),
               ),

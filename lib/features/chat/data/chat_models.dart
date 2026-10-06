@@ -155,6 +155,8 @@ class ConversationParticipantModel {
     this.avatarUrl,
     required this.role,
     this.roleSlug,
+    this.isOnline = false,
+    this.lastSeenAt,
     this.lastReadAt,
     this.isMuted = false,
   });
@@ -164,6 +166,8 @@ class ConversationParticipantModel {
   final String? avatarUrl;
   final String role;
   final String? roleSlug;
+  final bool isOnline;
+  final DateTime? lastSeenAt;
   final DateTime? lastReadAt;
   final bool isMuted;
 
@@ -180,10 +184,46 @@ class ConversationParticipantModel {
       avatarUrl: json['avatar_url'] as String? ?? u?['avatar_url'] as String?,
       role: json['role'] as String? ?? 'member',
       roleSlug: json['role_slug'] as String? ?? roleMap?['slug'] as String?,
+      isOnline: json['is_online'] as bool? ?? (u?['is_online'] as bool? ?? false),
+      lastSeenAt: json['last_seen_at'] != null
+          ? DateTime.tryParse(json['last_seen_at'].toString())
+          : (u?['last_seen_at'] != null ? DateTime.tryParse(u!['last_seen_at'].toString()) : null),
       lastReadAt: json['last_read_at'] != null ? DateTime.tryParse(json['last_read_at'].toString()) : null,
       isMuted: json['is_muted'] as bool? ?? false,
     );
   }
+}
+
+class UserPresenceModel {
+  const UserPresenceModel({
+    required this.userId,
+    required this.userName,
+    required this.isOnline,
+    this.lastSeenAt,
+  });
+
+  final int userId;
+  final String userName;
+  final bool isOnline;
+  final DateTime? lastSeenAt;
+
+  factory UserPresenceModel.fromJson(Map<String, dynamic> json) {
+    return UserPresenceModel(
+      userId: (json['user_id'] as num?)?.toInt() ?? 0,
+      userName: json['user_name'] as String? ?? json['name'] as String? ?? '',
+      isOnline: json['is_online'] as bool? ?? false,
+      lastSeenAt: json['last_seen_at'] != null
+          ? DateTime.tryParse(json['last_seen_at'].toString())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'user_id': userId,
+    'user_name': userName,
+    'is_online': isOnline,
+    'last_seen_at': lastSeenAt?.toIso8601String(),
+  };
 }
 
 class ConversationModel {
@@ -195,6 +235,11 @@ class ConversationModel {
     this.projectId,
     this.projectName,
     this.projectCode,
+    this.partnerId,
+    this.partnerName,
+    this.partnerAvatarUrl,
+    this.partnerIsOnline,
+    this.partnerLastSeenAt,
     this.unreadCount = 0,
     this.lastMessageAt,
     this.createdAt,
@@ -211,6 +256,11 @@ class ConversationModel {
   final int? projectId;
   final String? projectName;
   final String? projectCode;
+  final int? partnerId;
+  final String? partnerName;
+  final String? partnerAvatarUrl;
+  final bool? partnerIsOnline;
+  final DateTime? partnerLastSeenAt;
   final int unreadCount;
   final DateTime? lastMessageAt;
   final DateTime? createdAt;
@@ -240,6 +290,7 @@ class ConversationModel {
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
     final proj = json['project'] is Map ? json['project'] as Map : null;
+    final partner = json['partner'] is Map ? json['partner'] as Map : null;
     final latest = json['latest_message'] is Map ? json['latest_message'] as Map : null;
 
     final rawParticipants = json['participants'];
@@ -258,6 +309,11 @@ class ConversationModel {
       projectId: (json['project_id'] as num?)?.toInt(),
       projectName: proj != null ? proj['name'] as String? : null,
       projectCode: proj != null ? proj['code'] as String? : null,
+      partnerId: (partner?['id'] as num?)?.toInt(),
+      partnerName: partner?['name'] as String?,
+      partnerAvatarUrl: partner?['avatar_url'] as String?,
+      partnerIsOnline: partner?['is_online'] as bool?,
+      partnerLastSeenAt: partner?['last_seen_at'] != null ? DateTime.tryParse(partner!['last_seen_at'].toString()) : null,
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
       lastMessageAt: json['last_message_at'] != null ? DateTime.tryParse(json['last_message_at'].toString()) : null,
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,

@@ -14,6 +14,7 @@ import '../../tasks/data/task_models.dart';
 import '../../tasks/data/task_repository.dart';
 import '../../tasks/presentation/widgets/task_detail_dialog.dart';
 import '../application/chat_controller.dart';
+import '../application/presence_controller.dart';
 import '../data/chat_models.dart';
 import '../data/chat_repository.dart';
 
@@ -703,6 +704,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   Widget build(BuildContext context) {
     final chatStateAsync = ref.watch(chatRoomProvider(widget.conversationId));
     final currentUser = ref.watch(authControllerProvider).value;
+    final presence = ref.watch(presenceProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -711,6 +713,13 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         title: chatStateAsync.when(
           data: (state) {
             final conv = state.conversation;
+            final partnerId = conv.partnerId ??
+                (conv.participants.where((p) => p.userId != currentUser?.id).firstOrNull?.userId);
+            final isPartnerOnline = conv.isDirect && partnerId != null
+                ? (presence.isUserOnline(partnerId) || conv.partnerIsOnline == true)
+                : false;
+            final partnerPresenceText = partnerId != null ? presence.formatPresence(partnerId) : 'Offline';
+
             return InkWell(
               onTap: () => _showConversationInfoDialog(context, conv),
               child: Row(
@@ -766,13 +775,33 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                               ),
                             ],
                           )
+                        else if (conv.isDirect)
+                          Row(
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: isPartnerOnline ? AppColors.emerald : Colors.grey.shade400,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                isPartnerOnline ? 'Online' : partnerPresenceText,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isPartnerOnline ? AppColors.emerald : Colors.grey,
+                                  fontWeight: isPartnerOnline ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          )
                         else
                           Text(
-                            conv.isDirect
-                                ? 'Direct Chat • Tap for details'
-                                : conv.isGroup
-                                    ? '${conv.participants.length} members • Tap for details'
-                                    : 'Project Discussion • Tap for details',
+                            conv.isGroup
+                                ? '${conv.participants.length} members • Tap for details'
+                                : 'Project Discussion • Tap for details',
                             style: const TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                       ],

@@ -12,6 +12,7 @@ class AuthUser {
     this.isActive = true,
     this.isAttendanceApplicable = true,
     this.salary,
+    this.companyId,
     this.companyName,
     this.departmentId,
     this.departmentName,
@@ -42,6 +43,7 @@ class AuthUser {
   final String roleName;
   final int roleLevel;
 
+  final int? companyId;
   final String? companyName;
   final int? departmentId;
   final String? departmentName;
@@ -149,6 +151,7 @@ class AuthUser {
       roleSlug: role['slug'] as String? ?? '',
       roleName: role['name'] as String? ?? '',
       roleLevel: (role['level'] as num?)?.toInt() ?? 0,
+      companyId: idOf(json['company']),
       companyName: nameOf(json['company']),
       departmentId: idOf(json['department']),
       departmentName: nameOf(json['department']),
