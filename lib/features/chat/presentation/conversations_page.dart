@@ -17,6 +17,7 @@ class ConversationsPage extends ConsumerStatefulWidget {
 
 class _ConversationsPageState extends ConsumerState<ConversationsPage> {
   final _searchController = TextEditingController();
+  String _searchScope = 'chats'; // 'chats' or 'messages'
 
   @override
   void dispose() {
@@ -153,14 +154,16 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Search & Filter Bar
+                 // Search & Filter Bar
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Search chats, people, projects...',
+                          hintText: _searchScope == 'messages'
+                              ? 'Search message content across all chats...'
+                              : 'Search chats, people, projects...',
                           prefixIcon: const Icon(Icons.search, size: 20),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
@@ -169,6 +172,7 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
                                     _searchController.clear();
                                     ref.read(conversationsFilterProvider.notifier).state =
                                         filter.copyWith(search: '');
+                                    setState(() {});
                                   },
                                 )
                               : null,
@@ -184,7 +188,13 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
                             borderSide: BorderSide(color: AppColors.border),
                           ),
                         ),
+                        onChanged: (val) {
+                          setState(() {});
+                          ref.read(conversationsFilterProvider.notifier).state =
+                              filter.copyWith(search: val.trim());
+                        },
                         onSubmitted: (val) {
+                          setState(() {});
                           ref.read(conversationsFilterProvider.notifier).state =
                               filter.copyWith(search: val.trim());
                         },
@@ -194,49 +204,80 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Filter Pills: All, Direct, Group, Project
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                // Search Scope Pills (when search query is present)
+                if (_searchController.text.trim().isNotEmpty) ...[
+                  Row(
                     children: [
-                      _FilterChip(
-                        label: 'All Chats',
-                        isSelected: filter.type == 'all',
-                        onTap: () => ref.read(conversationsFilterProvider.notifier).state =
-                            filter.copyWith(type: 'all'),
+                      Text(
+                        'Search in:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
-                        label: 'Direct',
-                        icon: Icons.person_outline,
-                        isSelected: filter.type == 'direct',
-                        onTap: () => ref.read(conversationsFilterProvider.notifier).state =
-                            filter.copyWith(type: 'direct'),
+                        label: 'Conversations',
+                        icon: Icons.chat_bubble_outline,
+                        isSelected: _searchScope == 'chats',
+                        onTap: () => setState(() => _searchScope = 'chats'),
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
-                        label: 'Groups',
-                        icon: Icons.group_outlined,
-                        isSelected: filter.type == 'group',
-                        onTap: () => ref.read(conversationsFilterProvider.notifier).state =
-                            filter.copyWith(type: 'group'),
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Projects',
-                        icon: Icons.folder_outlined,
-                        isSelected: filter.type == 'project',
-                        onTap: () => ref.read(conversationsFilterProvider.notifier).state =
-                            filter.copyWith(type: 'project'),
+                        label: 'Message Content',
+                        icon: Icons.search,
+                        isSelected: _searchScope == 'messages',
+                        onTap: () => setState(() => _searchScope = 'messages'),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                ],
 
-                // Conversations List
+                // Filter Pills: All, Direct, Group, Project (visible in chats mode)
+                if (_searchScope != 'messages' || _searchController.text.trim().isEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _FilterChip(
+                          label: 'All Chats',
+                          isSelected: filter.type == 'all',
+                          onTap: () => ref.read(conversationsFilterProvider.notifier).state =
+                              filter.copyWith(type: 'all'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Direct',
+                          icon: Icons.person_outline,
+                          isSelected: filter.type == 'direct',
+                          onTap: () => ref.read(conversationsFilterProvider.notifier).state =
+                              filter.copyWith(type: 'direct'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Groups',
+                          icon: Icons.group_outlined,
+                          isSelected: filter.type == 'group',
+                          onTap: () => ref.read(conversationsFilterProvider.notifier).state =
+                              filter.copyWith(type: 'group'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Projects',
+                          icon: Icons.folder_outlined,
+                          isSelected: filter.type == 'project',
+                          onTap: () => ref.read(conversationsFilterProvider.notifier).state =
+                              filter.copyWith(type: 'project'),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_searchScope != 'messages' || _searchController.text.trim().isEmpty)
+                  const SizedBox(height: 16),
+
+                // Content View: Messages Search vs Conversations List
                 Expanded(
-                  child: conversationsAsync.when(
+                  child: (_searchScope == 'messages' && _searchController.text.trim().isNotEmpty)
+                      ? _MessageSearchResultsView(query: _searchController.text.trim())
+                      : conversationsAsync.when(
                     data: (conversations) {
                       if (conversations.isEmpty) {
                         return Center(
@@ -520,3 +561,181 @@ class _ConversationCard extends StatelessWidget {
     );
   }
 }
+
+class _MessageSearchResultsView extends ConsumerWidget {
+  const _MessageSearchResultsView({required this.query});
+
+  final String query;
+
+  String _formatTime(DateTime? dt) {
+    if (dt == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.month}/${dt.day}/${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (query.length < 2) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search, size: 48, color: AppColors.textMuted),
+            const SizedBox(height: 12),
+            const Text(
+              'Type at least 2 characters to search across all messages',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final searchAsync = ref.watch(messageSearchResultsProvider(query));
+
+    return searchAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Search failed: $err', style: const TextStyle(color: AppColors.rose)),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(messageSearchResultsProvider(query)),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+      data: (messages) {
+        if (messages.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search_off, size: 54, color: AppColors.textMuted),
+                const SizedBox(height: 12),
+                Text(
+                  'No messages matching "$query"',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Try searching for a different word or phrase.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Found ${messages.length} message${messages.length == 1 ? '' : 's'}',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                itemCount: messages.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final msg = messages[index];
+                  return Card(
+                    elevation: 0,
+                    margin: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    color: Theme.of(context).cardColor,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                        child: Text(
+                          msg.userName.isNotEmpty ? msg.userName[0].toUpperCase() : 'U',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              msg.userName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (msg.userRole != null) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '(${msg.userRole})',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                          const Spacer(),
+                          Text(
+                            _formatTime(msg.createdAt),
+                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            msg.message ?? (msg.hasAttachments ? '📎 [Attachment]' : ''),
+                            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (msg.hasTaskLink) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.check_circle_outline, size: 13, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    'Task: ${msg.taskTitle ?? "#${msg.taskId}"}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                      trailing: Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
+                      onTap: () => context.push('/chat/${msg.conversationId}'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+

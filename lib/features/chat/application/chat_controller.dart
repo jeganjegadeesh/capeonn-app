@@ -239,9 +239,38 @@ class ChatRoomNotifier extends AsyncNotifier<ChatRoomState> {
     final updated = current.messages.where((m) => m.id != messageId).toList();
     state = AsyncData(current.copyWith(messages: updated));
   }
+
+  Future<void> addParticipants(List<int> userIds) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final repo = ref.read(chatRepositoryProvider);
+    final updated = await repo.addParticipants(conversationId, userIds);
+    state = AsyncData(current.copyWith(conversation: updated));
+    ref.invalidate(conversationsListProvider);
+  }
+
+  Future<void> removeParticipant(int userId) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final repo = ref.read(chatRepositoryProvider);
+    await repo.removeParticipant(conversationId, userId);
+    final updatedConv = await repo.getConversation(conversationId);
+    state = AsyncData(current.copyWith(conversation: updatedConv));
+    ref.invalidate(conversationsListProvider);
+  }
 }
 
 final chatRoomProvider =
     AsyncNotifierProvider.family<ChatRoomNotifier, ChatRoomState, int>((conversationId) {
   return ChatRoomNotifier(conversationId);
+});
+
+/// Message search across conversations
+final messageSearchResultsProvider =
+    FutureProvider.autoDispose.family<List<ChatMessageModel>, String>((ref, query) async {
+  if (query.trim().length < 2) return [];
+  final repo = ref.watch(chatRepositoryProvider);
+  return repo.searchMessages(query.trim());
 });

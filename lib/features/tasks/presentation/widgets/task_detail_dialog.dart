@@ -11,8 +11,10 @@ import 'task_status_dialog.dart';
 import 'task_form_dialog.dart';
 import 'manual_time_dialog.dart';
 import 'dart:convert';
+import 'package:go_router/go_router.dart';
 import '../../../projects/application/project_files_controller.dart';
 import '../../../projects/data/project_files_repository.dart';
+import '../../../chat/data/chat_repository.dart';
 
 
 class TaskDetailDialog extends ConsumerStatefulWidget {
@@ -131,6 +133,28 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                           ],
                         ),
                       ),
+                      // Discuss in Project Chat button
+                      if (task.projectId > 0)
+                        IconButton(
+                          onPressed: () async {
+                            try {
+                              final conv = await ref
+                                  .read(chatRepositoryProvider)
+                                  .getProjectConversation(task.projectId);
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                context.push('/chat/${conv.id}');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                AppToast.error(context, 'Project chat not found');
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          tooltip: 'Discuss in Project Chat',
+                          color: AppColors.primary,
+                        ),
                       // Close button
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),

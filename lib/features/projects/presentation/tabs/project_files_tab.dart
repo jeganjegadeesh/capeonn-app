@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../chat/data/chat_models.dart';
+import '../../../tasks/presentation/widgets/task_detail_dialog.dart';
 import '../../application/project_files_controller.dart';
 import '../../data/project_files_repository.dart';
 import '../../data/project_models.dart';
@@ -187,6 +189,171 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
     }
   }
 
+  void _showFileDetailsDialog(BuildContext context, ProjectFileModel file) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                file.isImage
+                    ? Icons.image
+                    : file.isPdf
+                        ? Icons.picture_as_pdf
+                        : Icons.insert_drive_file,
+                color: AppColors.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.fileName,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    file.categoryDisplayName,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Preview Box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHover,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      file.isImage
+                          ? Icons.photo_library_outlined
+                          : file.isPdf
+                              ? Icons.menu_book_outlined
+                              : Icons.file_present_outlined,
+                      size: 48,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      file.fileName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${file.formattedSize} • ${file.mimeType}',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Details List
+              _buildDetailRow('Uploaded by', '${file.uploaderName}${file.uploaderRole != null ? " (${file.uploaderRole})" : ""}'),
+              _buildDetailRow('Date', file.createdAt != null ? '${file.createdAt!.month}/${file.createdAt!.day}/${file.createdAt!.year}' : 'Unknown'),
+              _buildDetailRow('Category', file.categoryDisplayName),
+              if (file.hasTaskLink)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Text('Linked Task:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          showDialog(
+                            context: context,
+                            builder: (_) => TaskDetailDialog(taskId: file.taskId!),
+                          );
+                        },
+                        child: Text(
+                          file.taskTitle ?? 'Task #${file.taskId}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (file.description != null && file.description!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text('Description / Notes:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Text(file.description!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.copy, size: 16),
+            label: const Text('Copy Link'),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: file.url));
+              AppToast.success(context, 'File link copied to clipboard');
+            },
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.download, size: 16),
+            label: const Text('Download'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              AppToast.success(context, 'Downloading ${file.fileName}...');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filesAsync = ref.watch(projectFilesProvider(widget.project.id));
@@ -333,6 +500,7 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
                     return _FileCard(
                       file: file,
                       canDelete: canDelete,
+                      onOpen: () => _showFileDetailsDialog(context, file),
                       onDelete: () => _deleteFile(file),
                     );
                   },
@@ -390,11 +558,13 @@ class _FileCard extends StatelessWidget {
   const _FileCard({
     required this.file,
     required this.canDelete,
+    required this.onOpen,
     required this.onDelete,
   });
 
   final ProjectFileModel file;
   final bool canDelete;
+  final VoidCallback onOpen;
   final VoidCallback onDelete;
 
   IconData _iconForFile() {
@@ -423,8 +593,11 @@ class _FileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: AppColors.border),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             Container(
@@ -497,6 +670,7 @@ class _FileCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

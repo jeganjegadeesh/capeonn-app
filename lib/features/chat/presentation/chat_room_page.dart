@@ -1,12 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../employees/data/employee_repository.dart';
+import '../../tasks/data/task_models.dart';
+import '../../tasks/data/task_repository.dart';
+import '../../tasks/presentation/widgets/task_detail_dialog.dart';
 import '../application/chat_controller.dart';
 import '../data/chat_models.dart';
+import '../data/chat_repository.dart';
 
 class ChatRoomPage extends ConsumerStatefulWidget {
   const ChatRoomPage({super.key, required this.conversationId});
@@ -22,6 +29,9 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   final _scrollController = ScrollController();
   bool _isSending = false;
   List<Map<String, dynamic>> _pendingAttachments = [];
+  TaskItem? _selectedTask;
+  Timer? _typingDebounce;
+  bool _isCurrentlyTyping = false;
 
   @override
   void initState() {
@@ -31,6 +41,10 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
 
   @override
   void dispose() {
+    _typingDebounce?.cancel();
+    if (_isCurrentlyTyping) {
+      ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, false);
+    }
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -42,19 +56,44 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     }
   }
 
+  void _onTextChanged(String text) {
+    if (text.trim().isNotEmpty && !_isCurrentlyTyping) {
+      _isCurrentlyTyping = true;
+      ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, true);
+    }
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(seconds: 3), () {
+      if (_isCurrentlyTyping) {
+        _isCurrentlyTyping = false;
+        ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, false);
+      }
+    });
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty && _pendingAttachments.isEmpty) return;
+    if (text.isEmpty && _pendingAttachments.isEmpty && _selectedTask == null) return;
 
     setState(() => _isSending = true);
     final atts = List<Map<String, dynamic>>.from(_pendingAttachments);
+    final taskId = _selectedTask?.id;
 
     _messageController.clear();
-    setState(() => _pendingAttachments = []);
+    setState(() {
+      _pendingAttachments = [];
+      _selectedTask = null;
+    });
+
+    _typingDebounce?.cancel();
+    if (_isCurrentlyTyping) {
+      _isCurrentlyTyping = false;
+      ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, false);
+    }
 
     try {
       await ref.read(chatRoomProvider(widget.conversationId).notifier).sendMessage(
         message: text.isNotEmpty ? text : null,
+        taskId: taskId,
         attachments: atts.isNotEmpty ? atts : null,
       );
     } catch (e) {
@@ -167,6 +206,392 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     );
   }
 
+  void _showActionMenu(BuildContext context, ConversationModel conv) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.primary,
+                  child: Icon(Icons.attach_file, color: Colors.white, size: 20),
+                ),
+                title: const Text('Attach File or Document'),
+                subtitle: const Text('PDF, image, doc, zip archive'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAttachmentDialog();
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.emerald,
+                  child: Icon(Icons.task_alt, color: Colors.white, size: 20),
+                ),
+                title: const Text('Link a Task'),
+                subtitle: Text(conv.isProject ? 'Attach a task from this project' : 'Attach one of your tasks'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showTaskPickerDialog(context, conv);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showTaskPickerDialog(BuildContext context, ConversationModel conv) async {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Consumer(
+        builder: (context, ref, _) {
+          final repo = ref.read(taskRepositoryProvider);
+          return FutureBuilder<List<TaskItem>>(
+            future: conv.projectId != null
+                ? repo.getProjectTasks(conv.projectId!)
+                : repo.getMyTasks(),
+            builder: (ctx, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final tasks = snapshot.data ?? [];
+              return AlertDialog(
+                title: Row(
+                  children: [
+                    const Icon(Icons.task_alt, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(conv.projectId != null ? 'Link Project Task' : 'Link a Task'),
+                  ],
+                ),
+                content: SizedBox(
+                  width: 440,
+                  child: tasks.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text('No active tasks found.', textAlign: TextAlign.center),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: tasks.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (ctx, i) {
+                            final t = tasks[i];
+                            return ListTile(
+                              dense: true,
+                              title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: Text('${t.statusDisplay} • ${t.priorityDisplay}', style: const TextStyle(fontSize: 11)),
+                              trailing: Icon(t.statusIcon, size: 16, color: t.statusColor),
+                              onTap: () {
+                                Navigator.pop(dialogCtx);
+                                setState(() => _selectedTask = t);
+                              },
+                            );
+                          },
+                        ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showConversationInfoDialog(BuildContext context, ConversationModel conv) {
+    final currentUserId = ref.read(authControllerProvider).value?.id;
+    final isGroupAdmin = conv.isGroup &&
+        conv.participants.any((p) => p.userId == currentUserId && p.role == 'admin');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: conv.isDirect
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : conv.isGroup
+                      ? AppColors.emerald.withValues(alpha: 0.15)
+                      : AppColors.amber.withValues(alpha: 0.15),
+              child: Icon(
+                conv.isDirect
+                    ? Icons.person
+                    : conv.isGroup
+                        ? Icons.group
+                        : Icons.folder_special,
+                color: conv.isDirect
+                    ? AppColors.primary
+                    : conv.isGroup
+                        ? AppColors.emerald
+                        : AppColors.amber,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                conv.displayName,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 480,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (conv.isProject && conv.projectId != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceHover,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Project Channel: ${conv.projectName ?? "Project #${conv.projectId}"}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if (conv.projectCode != null)
+                          Text('Code: ${conv.projectCode}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.open_in_browser, size: 16),
+                          label: const Text('Open Project Workspace'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(dialogCtx);
+                            context.push('/projects/${conv.projectId}');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Participants (${conv.participants.length})',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    if (isGroupAdmin)
+                      TextButton.icon(
+                        icon: const Icon(Icons.person_add, size: 16),
+                        label: const Text('Add'),
+                        onPressed: () {
+                          Navigator.pop(dialogCtx);
+                          _showAddParticipantDialog(context, conv);
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: conv.participants.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (ctx, i) {
+                    final p = conv.participants[i];
+                    final isSelf = p.userId == currentUserId;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                        child: Text(
+                          p.name.isNotEmpty ? p.name[0].toUpperCase() : 'U',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                      title: Text(
+                        '${p.name}${isSelf ? " (You)" : ""}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      subtitle: Text(p.role.toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      trailing: (isGroupAdmin && !isSelf)
+                          ? IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, size: 18, color: AppColors.rose),
+                              tooltip: 'Remove',
+                              onPressed: () async {
+                                Navigator.pop(dialogCtx);
+                                try {
+                                  await ref
+                                      .read(chatRoomProvider(widget.conversationId).notifier)
+                                      .removeParticipant(p.userId);
+                                  if (context.mounted) {
+                                    AppToast.success(context, 'Removed ${p.name}');
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    AppToast.error(context, 'Failed to remove: $e');
+                                  }
+                                }
+                              },
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          if (conv.isGroup)
+            TextButton.icon(
+              icon: const Icon(Icons.exit_to_app, color: AppColors.rose, size: 16),
+              label: const Text('Leave Group', style: TextStyle(color: AppColors.rose)),
+              onPressed: () async {
+                Navigator.pop(dialogCtx);
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Leave Group?'),
+                    content: const Text('Are you sure you want to leave this conversation?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.rose, foregroundColor: Colors.white),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Leave'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && currentUserId != null) {
+                  try {
+                    await ref
+                        .read(chatRoomProvider(widget.conversationId).notifier)
+                        .removeParticipant(currentUserId);
+                    if (context.mounted) {
+                      context.pop();
+                      AppToast.info(context, 'You left the group');
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppToast.error(context, 'Failed to leave group: $e');
+                    }
+                  }
+                }
+              },
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddParticipantDialog(BuildContext context, ConversationModel conv) async {
+    final existingIds = conv.participants.map((p) => p.userId).toSet();
+    final employeesRes = await ref.read(employeeRepositoryProvider).getEmployees(isActive: true, perPage: 100);
+    final available = employeesRes.items.where((e) => !existingIds.contains(e.id)).toList();
+
+    if (!context.mounted) return;
+
+    final selected = <int>{};
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Add Members to Group'),
+          content: SizedBox(
+            width: 400,
+            child: available.isEmpty
+                ? const Text('All active colleagues are already in this group.')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: available.length,
+                    itemBuilder: (_, i) {
+                      final emp = available[i];
+                      final isChecked = selected.contains(emp.id);
+                      return CheckboxListTile(
+                        value: isChecked,
+                        dense: true,
+                        title: Text(emp.name),
+                        subtitle: Text(emp.departmentName),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            if (val == true) {
+                              selected.add(emp.id);
+                            } else {
+                              selected.remove(emp.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: selected.isEmpty
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      try {
+                        await ref
+                            .read(chatRoomProvider(widget.conversationId).notifier)
+                            .addParticipants(selected.toList());
+                        if (context.mounted) {
+                          AppToast.success(context, 'Added ${selected.length} members to group');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          AppToast.error(context, 'Failed to add members: $e');
+                        }
+                      }
+                    },
+              child: Text('Add (${selected.length})'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatStateAsync = ref.watch(chatRoomProvider(widget.conversationId));
@@ -179,57 +604,69 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         title: chatStateAsync.when(
           data: (state) {
             final conv = state.conversation;
-            return Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: conv.isDirect
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : conv.isGroup
-                          ? AppColors.emerald.withValues(alpha: 0.15)
-                          : AppColors.amber.withValues(alpha: 0.15),
-                  child: Icon(
-                    conv.isDirect
-                        ? Icons.person
+            return InkWell(
+              onTap: () => _showConversationInfoDialog(context, conv),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: conv.isDirect
+                        ? AppColors.primary.withValues(alpha: 0.15)
                         : conv.isGroup
-                            ? Icons.group
-                            : Icons.folder_special,
-                    color: conv.isDirect
-                        ? AppColors.primary
-                        : conv.isGroup
-                            ? AppColors.emerald
-                            : AppColors.amber,
-                    size: 20,
+                            ? AppColors.emerald.withValues(alpha: 0.15)
+                            : AppColors.amber.withValues(alpha: 0.15),
+                    child: Icon(
+                      conv.isDirect
+                          ? Icons.person
+                          : conv.isGroup
+                              ? Icons.group
+                              : Icons.folder_special,
+                      color: conv.isDirect
+                          ? AppColors.primary
+                          : conv.isGroup
+                              ? AppColors.emerald
+                              : AppColors.amber,
+                      size: 20,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        conv.displayName,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        conv.isDirect
-                            ? 'Direct Chat'
-                            : conv.isGroup
-                                ? '${conv.participants.length} members'
-                                : 'Project Discussion',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          conv.displayName,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          conv.isDirect
+                              ? 'Direct Chat • Tap for details'
+                              : conv.isGroup
+                                  ? '${conv.participants.length} members • Tap for details'
+                                  : 'Project Discussion • Tap for details',
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
           loading: () => const Text('Loading chat...'),
           error: (_, _) => const Text('Chat Room'),
         ),
         actions: [
+          chatStateAsync.when(
+            data: (state) => IconButton(
+              icon: const Icon(Icons.info_outline),
+              tooltip: 'Conversation Info',
+              onPressed: () => _showConversationInfoDialog(context, state.conversation),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
@@ -315,6 +752,33 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                 ),
               ),
 
+            // Pending Task Link Bar
+            if (_selectedTask != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  border: Border(top: BorderSide(color: AppColors.primary.withValues(alpha: 0.2))),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Linked Task: ${_selectedTask!.title} (#${_selectedTask!.id})',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => setState(() => _selectedTask = null),
+                    ),
+                  ],
+                ),
+              ),
+
             // Replying To Banner
             if (state.replyingTo != null)
               Container(
@@ -370,12 +834,13 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                      tooltip: 'Attach file',
-                      onPressed: _showAttachmentDialog,
+                      tooltip: 'Attach or Link',
+                      onPressed: () => _showActionMenu(context, state.conversation),
                     ),
                     Expanded(
                       child: TextField(
                         controller: _messageController,
+                        onChanged: _onTextChanged,
                         textInputAction: TextInputAction.send,
                         keyboardType: TextInputType.multiline,
                         maxLines: 4,
@@ -608,32 +1073,51 @@ class _MessageBubble extends StatelessWidget {
                         ),
                       ),
 
-                    // Linked Task Badge
+                    // Linked Task Badge (clickable to view TaskDetailDialog)
                     if (message.hasTaskLink)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: (isSelf ? Colors.white : AppColors.primary).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_outline, size: 14, color: isSelf ? Colors.white : AppColors.primary),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Task: ${message.taskTitle ?? "Task #${message.taskId}"}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelf ? Colors.white : AppColors.primary,
+                      InkWell(
+                        onTap: () {
+                          if (message.taskId != null) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => TaskDetailDialog(taskId: message.taskId!),
+                            );
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (isSelf ? Colors.white : AppColors.primary).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_outline, size: 14, color: isSelf ? Colors.white : AppColors.primary),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Task: ${message.taskTitle ?? "Task #${message.taskId}"}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: isSelf ? Colors.white70 : AppColors.primary,
+                                    color: isSelf ? Colors.white : AppColors.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.open_in_new,
+                                size: 12,
+                                color: (isSelf ? Colors.white : AppColors.primary).withValues(alpha: 0.7),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
 

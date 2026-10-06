@@ -213,4 +213,23 @@ class ChatRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<ConversationModel> addParticipants(int conversationId, List<int> userIds) async {
+    try {
+      final res = await _dio.post('/conversations/$conversationId/participants', data: {
+        'user_ids': userIds,
+      });
+      return ConversationModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<void> removeParticipant(int conversationId, int userId) async {
+    try {
+      await _dio.delete('/conversations/$conversationId/participants/$userId');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

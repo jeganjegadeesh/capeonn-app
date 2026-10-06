@@ -213,5 +213,59 @@ void main() {
       expect(file.isImage, isFalse);
       expect(file.isPdf, isFalse);
     });
+
+    test('ChatMessageModel search results correctly parse and associate conversation IDs', () {
+      final searchResults = [
+        {
+          'id': 201,
+          'conversation_id': 12,
+          'user_id': 5,
+          'message': 'Meeting notes about Flutter architecture upgrade',
+          'type': 'text',
+          'user': {'id': 5, 'name': 'Lead Dev'},
+          'created_at': '2026-10-06T10:00:00.000Z',
+        },
+        {
+          'id': 202,
+          'conversation_id': 14,
+          'user_id': 8,
+          'message': 'Uploaded architecture spec',
+          'type': 'file',
+          'user': {'id': 8, 'name': 'Designer'},
+          'task': {'id': 99, 'title': 'Design Review'},
+          'created_at': '2026-10-06T10:05:00.000Z',
+        },
+      ];
+
+      final models = searchResults.map(ChatMessageModel.fromJson).toList();
+      expect(models.length, equals(2));
+      expect(models[0].conversationId, equals(12));
+      expect(models[0].message, contains('Flutter architecture'));
+      expect(models[0].hasTaskLink, isFalse);
+      expect(models[1].conversationId, equals(14));
+      expect(models[1].hasTaskLink, isTrue);
+      expect(models[1].taskId, equals(99));
+      expect(models[1].taskTitle, equals('Design Review'));
+    });
+
+    test('ConversationParticipantModel parses admin and member roles correctly', () {
+      final p1 = ConversationParticipantModel.fromJson({
+        'id': 1,
+        'user_id': 10,
+        'role': 'admin',
+        'user': {'id': 10, 'name': 'Admin User', 'email': 'admin@test.com'},
+      });
+      final p2 = ConversationParticipantModel.fromJson({
+        'id': 2,
+        'user_id': 20,
+        'role': 'member',
+        'user': {'id': 20, 'name': 'Member User'},
+      });
+
+      expect(p1.isAdmin, isTrue);
+      expect(p1.name, equals('Admin User'));
+      expect(p2.isAdmin, isFalse);
+      expect(p2.name, equals('Member User'));
+    });
   });
 }

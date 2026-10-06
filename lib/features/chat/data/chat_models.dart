@@ -167,6 +167,8 @@ class ConversationParticipantModel {
   final DateTime? lastReadAt;
   final bool isMuted;
 
+  bool get isAdmin => role == 'admin';
+
   factory ConversationParticipantModel.fromJson(Map<String, dynamic> json) {
     final u = json['user'] is Map ? json['user'] as Map : null;
     final name = json['name'] as String? ?? u?['name'] as String? ?? 'Participant';
