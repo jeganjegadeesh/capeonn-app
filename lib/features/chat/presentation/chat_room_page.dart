@@ -2,12 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../../../core/services/app_permission_service.dart';
+import '../../../core/services/file_download_service.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../employees/data/employee_repository.dart';
 import '../../tasks/data/task_models.dart';
@@ -127,6 +128,12 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   }
 
   Future<void> _pickDeviceFiles() async {
+    final hasPermission = await AppPermissionService.requestFileAccessPermission();
+    if (!hasPermission && mounted) {
+      AppToast.warning(context, 'Permission required to select files from device.');
+      return;
+    }
+
     try {
       final files = await FilePicker.pickFiles(
         type: FileType.any,
@@ -1470,13 +1477,15 @@ class _MessageBubble extends StatelessWidget {
     return InkWell(
       onTap: () async {
         if (att.url.isNotEmpty) {
-          try {
-            await launchUrl(Uri.parse(att.url), mode: LaunchMode.externalApplication);
-          } catch (_) {
-            Clipboard.setData(ClipboardData(text: att.url));
-            if (context.mounted) {
-              AppToast.info(context, 'Copied link: ${att.url}');
-            }
+          if (att.isImage) {
+            _showFullScreenImage(context, att.url, att.fileName);
+          } else {
+            await FileDownloadService.downloadFile(
+              context: context,
+              rawUrl: att.url,
+              fileName: att.fileName,
+              autoOpen: true,
+            );
           }
         }
       },
@@ -1526,7 +1535,17 @@ class _MessageBubble extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            Icon(Icons.download, size: 16, color: isSelf ? Colors.white70 : AppColors.textMuted),
+            IconButton(
+              icon: Icon(Icons.download, size: 18, color: isSelf ? Colors.white70 : AppColors.textMuted),
+              tooltip: 'Save to Downloads',
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.all(4),
+              onPressed: () => FileDownloadService.downloadFile(
+                context: context,
+                rawUrl: att.url,
+                fileName: att.fileName,
+              ),
+            ),
           ],
         ),
       ),
@@ -1565,12 +1584,30 @@ class _MessageBubble extends StatelessWidget {
             Positioned(
               top: 10,
               right: 10,
-              child: CircleAvatar(
-                backgroundColor: Colors.black54,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(ctx),
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.black54,
+                    child: IconButton(
+                      icon: const Icon(Icons.download, color: Colors.white, size: 20),
+                      tooltip: 'Save to Downloads',
+                      onPressed: () => FileDownloadService.downloadFile(
+                        context: context,
+                        rawUrl: url,
+                        fileName: title,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  CircleAvatar(
+                    backgroundColor: Colors.black54,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

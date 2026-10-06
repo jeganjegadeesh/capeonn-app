@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
+import '../../../../core/services/app_permission_service.dart';
+import '../../../../core/services/file_download_service.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../chat/data/chat_models.dart';
 import '../../../tasks/presentation/widgets/task_detail_dialog.dart';
@@ -66,6 +67,11 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () async {
+                    final hasPermission = await AppPermissionService.requestFileAccessPermission();
+                    if (!hasPermission && context.mounted) {
+                      AppToast.warning(context, 'Permission required to access files.');
+                      return;
+                    }
                     try {
                       final files = await FilePicker.pickFiles(type: FileType.any);
                       if (files.isNotEmpty) {
@@ -400,18 +406,12 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              try {
-                final uri = Uri.parse(file.url);
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                if (context.mounted) {
-                  AppToast.success(context, 'Opening ${file.fileName}');
-                }
-              } catch (_) {
-                if (context.mounted) {
-                  Clipboard.setData(ClipboardData(text: file.url));
-                  AppToast.info(context, 'Copied link: ${file.url}');
-                }
-              }
+              await FileDownloadService.downloadFile(
+                context: context,
+                rawUrl: file.url,
+                fileName: file.fileName,
+                autoOpen: true,
+              );
             },
           ),
         ],
@@ -735,20 +735,12 @@ class _FileCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.download, size: 20),
               tooltip: 'Download / View',
-              onPressed: () async {
-                try {
-                  final uri = Uri.parse(file.url);
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  if (context.mounted) {
-                    AppToast.success(context, 'Opening ${file.fileName}');
-                  }
-                } catch (_) {
-                  if (context.mounted) {
-                    Clipboard.setData(ClipboardData(text: file.url));
-                    AppToast.info(context, 'Copied link: ${file.url}');
-                  }
-                }
-              },
+              onPressed: () => FileDownloadService.downloadFile(
+                context: context,
+                rawUrl: file.url,
+                fileName: file.fileName,
+                autoOpen: true,
+              ),
             ),
             if (canDelete)
               IconButton(

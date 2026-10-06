@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../data/auth_repository.dart';
 import '../../../../provider/auth/auth_user.dart';
+import '../../../core/services/app_permission_service.dart';
 
 /// App-wide sign-in state:
 ///   loading        checking the saved token on start-up
@@ -14,13 +15,20 @@ final authControllerProvider =
 
 class AuthController extends AsyncNotifier<AuthUser?> {
   @override
-  Future<AuthUser?> build() => ref.read(authRepositoryProvider).restore();
+  Future<AuthUser?> build() async {
+    final user = await ref.read(authRepositoryProvider).restore();
+    if (user != null) {
+      AppPermissionService.requestNotificationPermission();
+    }
+    return user;
+  }
 
   /// Throws ApiException on failure so the login form can show the message.
   /// Deliberately does not switch to `loading`: that would rebuild the router and wipe the form.
   Future<void> login({required String email, required String password}) async {
     final user = await ref.read(authRepositoryProvider).login(email: email, password: password);
     state = AsyncData(user);
+    AppPermissionService.requestNotificationPermission();
   }
 
   Future<void> logout() async {

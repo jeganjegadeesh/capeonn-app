@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import '../../../projects/application/project_files_controller.dart';
 import '../../../projects/data/project_files_repository.dart';
 import '../../../chat/data/chat_repository.dart';
+import '../../../../core/services/file_download_service.dart';
 
 
 class TaskDetailDialog extends ConsumerStatefulWidget {
@@ -1048,8 +1049,19 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                         subtitle: Text('${file.formattedSize} • Uploaded by ${file.uploaderName}', style: const TextStyle(fontSize: 12)),
                         trailing: IconButton(
                           icon: const Icon(Icons.download, size: 20),
-                          tooltip: 'Download',
-                          onPressed: () => AppToast.success(context, 'Downloading ${file.fileName}...'),
+                          tooltip: 'Download / View',
+                          onPressed: () => FileDownloadService.downloadFile(
+                            context: context,
+                            rawUrl: file.url,
+                            fileName: file.fileName,
+                            autoOpen: true,
+                          ),
+                        ),
+                        onTap: () => FileDownloadService.downloadFile(
+                          context: context,
+                          rawUrl: file.url,
+                          fileName: file.fileName,
+                          autoOpen: true,
                         ),
                       ),
                     );

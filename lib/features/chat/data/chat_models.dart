@@ -1,3 +1,5 @@
+import '../../../core/config/app_config.dart';
+
 class ChatAttachmentModel {
   const ChatAttachmentModel({
     required this.id,
@@ -39,13 +41,14 @@ class ChatAttachmentModel {
   }
 
   factory ChatAttachmentModel.fromJson(Map<String, dynamic> json) {
+    final rawUrl = json['url'] as String? ?? json['file_path'] as String? ?? '';
     return ChatAttachmentModel(
       id: (json['id'] as num?)?.toInt() ?? 0,
       fileName: json['file_name'] as String? ?? 'Attachment',
       filePath: json['file_path'] as String? ?? '',
       fileSize: (json['file_size'] as num?)?.toInt() ?? 0,
       mimeType: json['mime_type'] as String? ?? 'application/octet-stream',
-      url: json['url'] as String? ?? '',
+      url: AppConfig.resolveFileUrl(rawUrl),
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
     );
   }
@@ -413,7 +416,7 @@ class ProjectFileModel {
       mimeType: json['mime_type'] as String? ?? 'application/octet-stream',
       category: json['category'] as String? ?? 'general',
       description: json['description'] as String?,
-      url: json['url'] as String? ?? '',
+      url: AppConfig.resolveFileUrl(json['url'] as String? ?? json['file_path'] as String?),
       uploaderId: (uploader['id'] as num?)?.toInt() ?? 0,
       uploaderName: uploader['name'] as String? ?? 'Uploader',
       uploaderRole: uploader['role'] as String?,

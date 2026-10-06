@@ -43,6 +43,16 @@
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Capeonn requires access to your photo library to attach images and documents in chat and project workspaces.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Capeonn requires camera access to take photos for chat attachments and profile images.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Capeonn requires microphone access for audio recordings.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 </dict>

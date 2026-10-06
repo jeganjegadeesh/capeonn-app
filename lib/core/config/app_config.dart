@@ -32,6 +32,29 @@ class AppConfig {
   /// Sent as `device_name` on login so sessions can be told apart later.
   static String get deviceName => kIsWeb ? 'web' : defaultTargetPlatform.name;
 
+  /// Resolves an asset/attachment URL to an absolute, reachable URL across all platforms.
+  static String resolveFileUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return '';
+    final url = rawUrl.trim();
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        if (url.contains('localhost:8000') || url.contains('127.0.0.1:8000')) {
+          return url.replaceAll('localhost:8000', '10.0.2.2:8000').replaceAll('127.0.0.1:8000', '10.0.2.2:8000');
+        }
+        if (url.contains('localhost') && !url.contains('10.0.2.2')) {
+          return url.replaceAll('localhost', '10.0.2.2');
+        }
+      }
+      return url;
+    }
+
+    // Relative path (e.g. /storage/uploads/xyz.png)
+    final serverBase = apiBaseUrl.replaceAll('/api/v1', '');
+    final cleanPath = url.startsWith('/') ? url : '/$url';
+    return '$serverBase$cleanPath';
+  }
+
   // ===========================================================================
   // WEBSOCKET CONFIGURATION (Pusher / Soketi)
   // ===========================================================================
