@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -35,6 +37,8 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
     final descController = TextEditingController();
     String category = 'general';
     bool isUploading = false;
+    List<int>? pickedBytes;
+    int? pickedSize;
 
     showDialog(
       context: context,
@@ -54,6 +58,52 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.folder_open, size: 18),
+                  label: Text(pickedBytes != null ? 'Change Selected File' : 'Browse File from Device'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(42),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () async {
+                    try {
+                      final files = await FilePicker.pickFiles(type: FileType.any);
+                      if (files.isNotEmpty) {
+                        final file = files.first;
+                        final ext = file.extension?.toLowerCase() ?? '';
+                        String cat = 'general';
+                        if (ext == 'png' || ext == 'jpg' || ext == 'jpeg') {
+                          cat = 'design';
+                        } else if (ext == 'pdf') {
+                          cat = 'specification';
+                        } else if (ext == 'doc' || ext == 'docx' || ext == 'txt') {
+                          cat = 'document';
+                        } else if (ext == 'zip') {
+                          cat = 'archive';
+                        }
+
+                        final bytes = await file.readAsBytes();
+                        final size = file.lengthSync() ?? bytes.length;
+
+                        setDialogState(() {
+                          nameController.text = file.name;
+                          category = cat;
+                          pickedBytes = bytes;
+                          pickedSize = size;
+                        });
+                      }
+                    } catch (_) {}
+                  },
+                ),
+                if (pickedSize != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 4),
+                    child: Text(
+                      'Selected: ${(pickedSize! / 1024).toStringAsFixed(1)} KB ready for upload',
+                      style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -125,11 +175,12 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
 
                       try {
                         final repo = ref.read(projectFilesRepositoryProvider);
-                        final dummyContent = utf8.encode('Capeonn Document: $fname\nProject: ${widget.project.name}');
+                        final uploadBytes = pickedBytes ??
+                            utf8.encode('Capeonn Document: $fname\nProject: ${widget.project.name}');
 
                         await repo.uploadProjectFile(
                           widget.project.id,
-                          fileBytes: dummyContent,
+                          fileBytes: uploadBytes,
                           fileName: fname,
                           category: category,
                           description: descController.text.trim().isNotEmpty
@@ -241,36 +292,52 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
               // Preview Box
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(24),
+                padding: file.isImage ? EdgeInsets.zero : const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceHover,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                      file.isImage
-                          ? Icons.photo_library_outlined
-                          : file.isPdf
-                              ? Icons.menu_book_outlined
-                              : Icons.file_present_outlined,
-                      size: 48,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      file.fileName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${file.formattedSize} • ${file.mimeType}',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
+                child: file.isImage && file.url.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          child: Image.network(
+                            file.url,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Center(
+                                child: Icon(Icons.broken_image, size: 48, color: AppColors.textMuted),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          Icon(
+                            file.isPdf
+                                ? Icons.menu_book_outlined
+                                : Icons.file_present_outlined,
+                            size: 48,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            file.fileName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${file.formattedSize} • ${file.mimeType}',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
               ),
               const SizedBox(height: 16),
 
@@ -326,14 +393,25 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
           ),
           ElevatedButton.icon(
             icon: const Icon(Icons.download, size: 16),
-            label: const Text('Download'),
+            label: const Text('Download / Open'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              AppToast.success(context, 'Downloading ${file.fileName}...');
+              try {
+                final uri = Uri.parse(file.url);
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (context.mounted) {
+                  AppToast.success(context, 'Opening ${file.fileName}');
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  Clipboard.setData(ClipboardData(text: file.url));
+                  AppToast.info(context, 'Copied link: ${file.url}');
+                }
+              }
             },
           ),
         ],
@@ -657,8 +735,19 @@ class _FileCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.download, size: 20),
               tooltip: 'Download / View',
-              onPressed: () {
-                AppToast.success(context, 'Downloading ${file.fileName}...');
+              onPressed: () async {
+                try {
+                  final uri = Uri.parse(file.url);
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (context.mounted) {
+                    AppToast.success(context, 'Opening ${file.fileName}');
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    Clipboard.setData(ClipboardData(text: file.url));
+                    AppToast.info(context, 'Copied link: ${file.url}');
+                  }
+                }
               },
             ),
             if (canDelete)

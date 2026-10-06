@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,6 +34,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   TaskItem? _selectedTask;
   Timer? _typingDebounce;
   bool _isCurrentlyTyping = false;
+  List<ConversationParticipantModel> _mentionSuggestions = [];
 
   @override
   void initState() {
@@ -56,7 +59,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     }
   }
 
-  void _onTextChanged(String text) {
+  void _onTextChanged(String text, ConversationModel conv) {
     if (text.trim().isNotEmpty && !_isCurrentlyTyping) {
       _isCurrentlyTyping = true;
       ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, true);
@@ -68,6 +71,98 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, false);
       }
     });
+
+    _checkForMentions(text, conv);
+  }
+
+  void _checkForMentions(String text, ConversationModel conv) {
+    final selection = _messageController.selection;
+    final cursor = selection.baseOffset;
+    if (cursor < 0 || cursor > text.length) {
+      if (_mentionSuggestions.isNotEmpty) setState(() => _mentionSuggestions = []);
+      return;
+    }
+
+    final beforeCursor = text.substring(0, cursor);
+    final lastAt = beforeCursor.lastIndexOf('@');
+    if (lastAt >= 0) {
+      final afterAt = beforeCursor.substring(lastAt + 1);
+      if (lastAt == 0 || beforeCursor[lastAt - 1] == ' ' || beforeCursor[lastAt - 1] == '\n') {
+        if (!afterAt.contains(' ') && !afterAt.contains('\n')) {
+          final query = afterAt.toLowerCase();
+          final matches = conv.participants
+              .where((p) => p.name.toLowerCase().contains(query))
+              .toList();
+          setState(() {
+            _mentionSuggestions = matches;
+          });
+          return;
+        }
+      }
+    }
+
+    if (_mentionSuggestions.isNotEmpty) {
+      setState(() => _mentionSuggestions = []);
+    }
+  }
+
+  void _insertMention(ConversationParticipantModel p) {
+    final text = _messageController.text;
+    final selection = _messageController.selection;
+    final cursor = selection.baseOffset >= 0 ? selection.baseOffset : text.length;
+    final beforeCursor = text.substring(0, cursor);
+    final lastAt = beforeCursor.lastIndexOf('@');
+    if (lastAt >= 0) {
+      final prefix = text.substring(0, lastAt);
+      final suffix = text.substring(cursor);
+      final mentionText = '@${p.name} ';
+      final newText = '$prefix$mentionText$suffix';
+      _messageController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: prefix.length + mentionText.length),
+      );
+    }
+    setState(() => _mentionSuggestions = []);
+  }
+
+  Future<void> _pickDeviceFiles() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.any,
+      );
+
+      if (files.isNotEmpty) {
+        for (final f in files) {
+          final ext = f.extension?.toLowerCase() ?? '';
+          final mime = ext == 'png'
+              ? 'image/png'
+              : (ext == 'jpg' || ext == 'jpeg')
+                  ? 'image/jpeg'
+                  : ext == 'pdf'
+                      ? 'application/pdf'
+                      : ext == 'zip'
+                          ? 'application/zip'
+                          : (ext == 'doc' || ext == 'docx')
+                              ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                              : 'application/octet-stream';
+
+          final size = f.lengthSync() ?? (await f.length()) ?? 0;
+
+          setState(() {
+            _pendingAttachments.add({
+              'file_path': f.path ?? 'uploads/${f.name}',
+              'file_name': f.name,
+              'file_size': size,
+              'mime_type': mime,
+            });
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        _showAttachmentDialog();
+      }
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -232,8 +327,20 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                   backgroundColor: AppColors.primary,
                   child: Icon(Icons.attach_file, color: Colors.white, size: 20),
                 ),
-                title: const Text('Attach File or Document'),
-                subtitle: const Text('PDF, image, doc, zip archive'),
+                title: const Text('Pick Files from Device'),
+                subtitle: const Text('Browse photos, documents, PDFs, zip'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickDeviceFiles();
+                },
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  child: const Icon(Icons.note_add, color: AppColors.primary, size: 20),
+                ),
+                title: const Text('Attach Sample Document'),
+                subtitle: const Text('Staged document, PDF, or specification'),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showAttachmentDialog();
@@ -822,6 +929,44 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                 ),
               ),
 
+            // Mention Suggestions Popup
+            if (_mentionSuggestions.isNotEmpty)
+              Container(
+                constraints: const BoxConstraints(maxHeight: 180),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  border: Border(top: BorderSide(color: AppColors.border)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _mentionSuggestions.length,
+                  itemBuilder: (context, idx) {
+                    final p = _mentionSuggestions[idx];
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 13,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                        child: Text(
+                          p.name.isNotEmpty ? p.name[0].toUpperCase() : 'U',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                      title: Text(p.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      subtitle: Text(p.role, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      onTap: () => _insertMention(p),
+                    );
+                  },
+                ),
+              ),
+
             // Input Row
             Container(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
@@ -840,7 +985,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                     Expanded(
                       child: TextField(
                         controller: _messageController,
-                        onChanged: _onTextChanged,
+                        onChanged: (text) => _onTextChanged(text, state.conversation),
                         textInputAction: TextInputAction.send,
                         keyboardType: TextInputType.multiline,
                         maxLines: 4,
@@ -1121,9 +1266,9 @@ class _MessageBubble extends StatelessWidget {
                         ),
                       ),
 
-                    // Attachments Cards
+                    // Attachments Cards & Inline Images
                     if (message.hasAttachments)
-                      ...message.attachments.map((att) => _buildAttachmentCard(att, isSelf)),
+                      ...message.attachments.map((att) => _buildAttachmentCard(context, att, isSelf)),
 
                     // Text Content
                     if (message.message != null && message.message!.isNotEmpty)
@@ -1169,52 +1314,188 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAttachmentCard(ChatAttachmentModel att, bool isSelf) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: (isSelf ? Colors.black : Colors.white).withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            att.isImage
-                ? Icons.image
-                : att.isPdf
-                    ? Icons.picture_as_pdf
-                    : Icons.insert_drive_file,
-            size: 24,
-            color: isSelf ? Colors.white : AppColors.primary,
+  Widget _buildAttachmentCard(BuildContext context, ChatAttachmentModel att, bool isSelf) {
+    if (att.isImage && att.url.isNotEmpty) {
+      return GestureDetector(
+        onTap: () => _showFullScreenImage(context, att.url, att.fileName),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 220),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: (isSelf ? Colors.white : AppColors.primary).withValues(alpha: 0.3)),
           ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(
               children: [
-                Text(
-                  att.fileName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isSelf ? Colors.white : AppColors.textPrimary,
+                Image.network(
+                  att.url,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 100,
+                    color: Colors.grey.shade200,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.image, color: Colors.grey.shade600, size: 28),
+                          const SizedBox(height: 4),
+                          Text(att.fileName, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      height: 100,
+                      color: (isSelf ? Colors.black12 : Colors.grey.shade100),
+                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    );
+                  },
                 ),
-                Text(
-                  att.formattedSize,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isSelf ? Colors.white70 : AppColors.textSecondary,
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    color: Colors.black54,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            att.fileName,
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          att.formattedSize,
+                          style: const TextStyle(color: Colors.white70, fontSize: 10),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: () async {
+        if (att.url.isNotEmpty) {
+          try {
+            await launchUrl(Uri.parse(att.url), mode: LaunchMode.externalApplication);
+          } catch (_) {
+            Clipboard.setData(ClipboardData(text: att.url));
+            if (context.mounted) {
+              AppToast.info(context, 'Copied link: ${att.url}');
+            }
+          }
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: (isSelf ? Colors.black : Colors.white).withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              att.isImage
+                  ? Icons.image
+                  : att.isPdf
+                      ? Icons.picture_as_pdf
+                      : Icons.insert_drive_file,
+              size: 24,
+              color: isSelf ? Colors.white : AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    att.fileName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isSelf ? Colors.white : AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    att.formattedSize,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isSelf ? Colors.white70 : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.download, size: 16, color: isSelf ? Colors.white70 : AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String url, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  url,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.black87,
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image, color: Colors.white, size: 48),
+                        const SizedBox(height: 12),
+                        Text(title, style: const TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black54,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
