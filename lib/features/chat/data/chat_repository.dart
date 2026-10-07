@@ -232,4 +232,55 @@ class ChatRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<ChatMessageModel> editMessage(int conversationId, int messageId, String newText) async {
+    try {
+      final res = await _dio.put('/conversations/$conversationId/messages/$messageId', data: {
+        'message': newText,
+      });
+      return ChatMessageModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<ChatMessageModel> pinMessage(int conversationId, int messageId) async {
+    try {
+      final res = await _dio.post('/conversations/$conversationId/messages/$messageId/pin');
+      return ChatMessageModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<bool> muteConversation(int conversationId, {bool? isMuted}) async {
+    try {
+      final data = isMuted != null ? {'is_muted': isMuted} : null;
+      final res = await _dio.post('/conversations/$conversationId/mute', data: data);
+      return res.data['data']['is_muted'] as bool? ?? false;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<void> leaveConversation(int conversationId) async {
+    try {
+      await _dio.post('/conversations/$conversationId/leave');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<List<ChatMessageModel>> getTaskMessages(int taskId) async {
+    try {
+      final res = await _dio.get('/tasks/$taskId/messages');
+      final rawList = res.data['data'] as List? ?? [];
+      return rawList
+          .whereType<Map>()
+          .map((m) => ChatMessageModel.fromJson(Map<String, dynamic>.from(m)))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/services/app_permission_service.dart';
@@ -139,7 +140,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         type: FileType.any,
       );
 
-      if (files.isNotEmpty) {
+      if (files.isNotEmpty && mounted) {
+        AppToast.info(context, 'Uploading attachment...');
         for (final f in files) {
           final ext = f.extension?.toLowerCase() ?? '';
           final mime = ext == 'png'
@@ -154,21 +156,29 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                               ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                               : 'application/octet-stream';
 
-          final size = f.lengthSync() ?? (await f.length()) ?? 0;
+          final bytes = await f.readAsBytes();
+          final uploaded = await ref.read(chatRepositoryProvider).uploadAttachment(
+            bytes,
+            f.name,
+            mimeType: mime,
+          );
 
-          setState(() {
-            _pendingAttachments.add({
-              'file_path': f.path ?? 'uploads/${f.name}',
-              'file_name': f.name,
-              'file_size': size,
-              'mime_type': mime,
+          if (mounted) {
+            setState(() {
+              _pendingAttachments.add({
+                'upload_id': uploaded.id,
+                'file_path': uploaded.filePath,
+                'file_name': uploaded.fileName,
+                'file_size': uploaded.fileSize,
+                'mime_type': uploaded.mimeType,
+              });
             });
-          });
+          }
         }
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        _showAttachmentDialog();
+        AppToast.error(context, 'Failed to select or upload attachment.');
       }
     }
   }
@@ -201,112 +211,38 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       );
     } catch (e) {
       if (mounted) {
-        AppToast.error(context, 'Failed to send message: $e');
+        String msg = 'Failed to send message';
+        if (e is ApiException) {
+          if (e.statusCode == 403) {
+            msg = 'You do not have permission to send messages here.';
+          } else if (e.statusCode == 404) {
+            msg = 'Conversation or resource not found.';
+          } else if (e.statusCode == 413) {
+            msg = 'Attachment exceeds the allowed size limit (20 MB).';
+          } else if (e.statusCode == 422) {
+            msg = e.message.isNotEmpty ? e.message : 'Validation failed. Please verify your input.';
+          } else {
+            msg = e.message;
+          }
+        } else {
+          final s = e.toString().replaceFirst('Exception: ', '');
+          if (s.contains('403')) {
+            msg = 'You do not have permission to post in this chat.';
+          } else if (s.contains('413')) {
+            msg = 'File exceeds upload size limit (20 MB).';
+          } else if (s.contains('422')) {
+            msg = 'Invalid message or attachment.';
+          } else {
+            msg = s;
+          }
+        }
+        AppToast.error(context, msg);
       }
     } finally {
       if (mounted) {
         setState(() => _isSending = false);
       }
     }
-  }
-
-  void _showAttachmentDialog() {
-    final nameController = TextEditingController(text: 'project_document.pdf');
-    String type = 'pdf';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.attach_file, color: AppColors.primary),
-              SizedBox(width: 8),
-              Text('Attach File or Image'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Select attachment type:', style: TextStyle(fontSize: 13, color: Colors.grey)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  isDense: true,
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'pdf', child: Text('PDF Document (.pdf)')),
-                  DropdownMenuItem(value: 'image', child: Text('Image (.png, .jpg)')),
-                  DropdownMenuItem(value: 'doc', child: Text('Office Document (.docx)')),
-                  DropdownMenuItem(value: 'zip', child: Text('Archive (.zip)')),
-                ],
-                onChanged: (val) {
-                  if (val != null) {
-                    setDialogState(() {
-                      type = val;
-                      nameController.text = val == 'image'
-                          ? 'screenshot.png'
-                          : val == 'doc'
-                              ? 'specification.docx'
-                              : val == 'zip'
-                                  ? 'archive.zip'
-                                  : 'document.pdf';
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'File Name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                final fname = nameController.text.trim();
-                if (fname.isEmpty) return;
-                Navigator.pop(ctx);
-
-                final mime = type == 'image'
-                    ? 'image/png'
-                    : type == 'pdf'
-                        ? 'application/pdf'
-                        : type == 'zip'
-                            ? 'application/zip'
-                            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-                setState(() {
-                  _pendingAttachments.add({
-                    'file_path': 'uploads/$fname',
-                    'file_name': fname,
-                    'file_size': 1024 * 250, // 250 KB
-                    'mime_type': mime,
-                  });
-                });
-              },
-              child: const Text('Add Attachment'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showActionMenu(BuildContext context, ConversationModel conv) {
@@ -340,18 +276,6 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickDeviceFiles();
-                },
-              ),
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: const Icon(Icons.note_add, color: AppColors.primary, size: 20),
-                ),
-                title: const Text('Attach Sample Document'),
-                subtitle: const Text('Staged document, PDF, or specification'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showAttachmentDialog();
                 },
               ),
               ListTile(
