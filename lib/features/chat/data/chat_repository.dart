@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../employees/data/employee_model.dart';
 import 'chat_models.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -46,6 +47,25 @@ class ChatRepository {
     try {
       final res = await _dio.get('/conversations/unread-summary');
       return (res.data['data']?['total_unread'] as num?)?.toInt() ?? 0;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<PaginatedEmployees> getColleagues({
+    String? search,
+    int page = 1,
+    int perPage = 50,
+  }) async {
+    try {
+      final params = <String, dynamic>{
+        'page': page,
+        'per_page': perPage,
+      };
+      if (search != null && search.isNotEmpty) params['search'] = search;
+
+      final res = await _dio.get('/conversations/colleagues', queryParameters: params);
+      return PaginatedEmployees.fromJson(Map<String, dynamic>.from(res.data as Map));
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

@@ -6,7 +6,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../employees/data/employee_model.dart';
-import '../../../employees/data/employee_repository.dart';
 import '../../application/chat_controller.dart';
 import '../../data/chat_repository.dart';
 
@@ -43,10 +42,9 @@ class _NewDirectChatDialogState extends ConsumerState<NewDirectChatDialog> {
     });
 
     try {
-      final repo = ref.read(employeeRepositoryProvider);
-      final res = await repo.getEmployees(
+      final chatRepo = ref.read(chatRepositoryProvider);
+      final res = await chatRepo.getColleagues(
         search: query,
-        isActive: true,
         perPage: 50,
       );
 

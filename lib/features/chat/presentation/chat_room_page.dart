@@ -11,7 +11,6 @@ import '../../../core/widgets/app_toast.dart';
 import '../../../core/services/app_permission_service.dart';
 import '../../../core/services/file_download_service.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../employees/data/employee_repository.dart';
 import '../../tasks/data/task_models.dart';
 import '../../tasks/data/task_repository.dart';
 import '../../tasks/presentation/widgets/task_detail_dialog.dart';
@@ -563,7 +562,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
 
   Future<void> _showAddParticipantDialog(BuildContext context, ConversationModel conv) async {
     final existingIds = conv.participants.map((p) => p.userId).toSet();
-    final employeesRes = await ref.read(employeeRepositoryProvider).getEmployees(isActive: true, perPage: 100);
+    final employeesRes = await ref.read(chatRepositoryProvider).getColleagues(perPage: 100);
     final available = employeesRes.items.where((e) => !existingIds.contains(e.id)).toList();
 
     if (!context.mounted) return;
