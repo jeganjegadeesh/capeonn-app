@@ -249,19 +249,25 @@ class ChatRoomNotifier extends AsyncNotifier<ChatRoomState> {
     try {
       final repo = ref.read(chatRepositoryProvider);
       final latest = await repo.getMessages(conversationId, perPage: 20);
-      if (latest.isEmpty) return;
+      if (latest.isNotEmpty) {
+        final existingIds = current.messages.map((m) => m.id).toSet();
+        final newMessages = latest.where((m) => !existingIds.contains(m.id)).toList();
 
-      final existingIds = current.messages.map((m) => m.id).toSet();
-      final newMessages = latest.where((m) => !existingIds.contains(m.id)).toList();
+        if (newMessages.isNotEmpty) {
+          // Merge and sort descending
+          final merged = <ChatMessageModel>[...newMessages, ...current.messages];
+          merged.sort((a, b) => b.id.compareTo(a.id));
 
-      if (newMessages.isNotEmpty) {
-        // Merge and sort descending
-        final merged = <ChatMessageModel>[...newMessages, ...current.messages];
-        merged.sort((a, b) => b.id.compareTo(a.id));
+          state = AsyncData(current.copyWith(messages: merged));
+          await repo.markAsRead(conversationId);
+          ref.invalidate(chatUnreadCountProvider);
+        }
+      }
 
-        state = AsyncData(current.copyWith(messages: merged));
-        await repo.markAsRead(conversationId);
-        ref.invalidate(chatUnreadCountProvider);
+      // Dual-mode sync: check active partner typing status as fallback
+      final typingData = await repo.getTyping(conversationId);
+      if (typingData != null && typingData.isTyping) {
+        _handleIncomingTyping(typingData);
       }
     } catch (_) {
       // Keep silent on transient background sync glitches

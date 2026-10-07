@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:capeonn_app/core/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -36,6 +37,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   TaskItem? _selectedTask;
   Timer? _typingDebounce;
   bool _isCurrentlyTyping = false;
+  DateTime? _lastTypingSent;
   List<ConversationParticipantModel> _mentionSuggestions = [];
 
   @override
@@ -62,10 +64,24 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   }
 
   void _onTextChanged(String text, ConversationModel conv) {
-    if (text.trim().isNotEmpty && !_isCurrentlyTyping) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      if (_isCurrentlyTyping) {
+        _isCurrentlyTyping = false;
+        _typingDebounce?.cancel();
+        ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, false);
+      }
+      _checkForMentions(text, conv);
+      return;
+    }
+
+    final now = DateTime.now();
+    if (!_isCurrentlyTyping || _lastTypingSent == null || now.difference(_lastTypingSent!).inSeconds >= 2) {
       _isCurrentlyTyping = true;
+      _lastTypingSent = now;
       ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, true);
     }
+
     _typingDebounce?.cancel();
     _typingDebounce = Timer(const Duration(seconds: 3), () {
       if (_isCurrentlyTyping) {
@@ -1324,22 +1340,23 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Widget _buildAttachmentCard(BuildContext context, ChatAttachmentModel att, bool isSelf) {
-    if (att.isImage && att.url.isNotEmpty) {
-      return GestureDetector(
-        onTap: () => _showFullScreenImage(context, att.url, att.fileName),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 220),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: (isSelf ? Colors.white : AppColors.primary).withValues(alpha: 0.3)),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
-              children: [
-                Image.network(
-                  att.url,
+    final resolvedUrl = AppConfig.resolveFileUrl(att.url);
+    if (att.isImage && resolvedUrl.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        constraints: const BoxConstraints(maxWidth: 280, maxHeight: 220),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: (isSelf ? Colors.white : AppColors.primary).withValues(alpha: 0.3)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTap: () => _showFullScreenImage(context, resolvedUrl, att.fileName),
+                child: Image.network(
+                  resolvedUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   errorBuilder: (context, error, stackTrace) => Container(
@@ -1365,33 +1382,47 @@ class _MessageBubble extends StatelessWidget {
                     );
                   },
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    color: Colors.black54,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            att.fileName,
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  color: Colors.black54,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          att.fileName,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          att.formattedSize,
-                          style: const TextStyle(color: Colors.white70, fontSize: 10),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        att.formattedSize,
+                        style: const TextStyle(color: Colors.white70, fontSize: 10),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.download, size: 16, color: Colors.white),
+                        tooltip: 'Download',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(2),
+                        onPressed: () => FileDownloadService.downloadFile(
+                          context: context,
+                          rawUrl: att.url,
+                          fileName: att.fileName,
+                          mimeType: att.mimeType,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -1401,12 +1432,13 @@ class _MessageBubble extends StatelessWidget {
       onTap: () async {
         if (att.url.isNotEmpty) {
           if (att.isImage) {
-            _showFullScreenImage(context, att.url, att.fileName);
+            _showFullScreenImage(context, resolvedUrl, att.fileName);
           } else {
             await FileDownloadService.downloadFile(
               context: context,
               rawUrl: att.url,
               fileName: att.fileName,
+              mimeType: att.mimeType,
               autoOpen: true,
             );
           }
@@ -1460,13 +1492,14 @@ class _MessageBubble extends StatelessWidget {
             const SizedBox(width: 6),
             IconButton(
               icon: Icon(Icons.download, size: 18, color: isSelf ? Colors.white70 : AppColors.textMuted),
-              tooltip: 'Save to Downloads',
+              tooltip: 'Download file',
               constraints: const BoxConstraints(),
               padding: const EdgeInsets.all(4),
               onPressed: () => FileDownloadService.downloadFile(
                 context: context,
                 rawUrl: att.url,
                 fileName: att.fileName,
+                mimeType: att.mimeType,
               ),
             ),
           ],
@@ -1476,6 +1509,7 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _showFullScreenImage(BuildContext context, String url, String title) {
+    final resolvedUrl = AppConfig.resolveFileUrl(url);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -1488,7 +1522,7 @@ class _MessageBubble extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  url,
+                  resolvedUrl,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: Colors.black87,
                     padding: const EdgeInsets.all(32),
@@ -1514,11 +1548,12 @@ class _MessageBubble extends StatelessWidget {
                     backgroundColor: Colors.black54,
                     child: IconButton(
                       icon: const Icon(Icons.download, color: Colors.white, size: 20),
-                      tooltip: 'Save to Downloads',
+                      tooltip: 'Download',
                       onPressed: () => FileDownloadService.downloadFile(
                         context: context,
                         rawUrl: url,
                         fileName: title,
+                        mimeType: 'image/png',
                       ),
                     ),
                   ),

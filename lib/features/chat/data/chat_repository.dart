@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../employees/data/employee_model.dart';
 import 'chat_models.dart';
+import 'chat_websocket_service.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return ChatRepository(ref.watch(dioProvider));
@@ -181,6 +182,19 @@ class ChatRepository {
       });
     } catch (_) {
       // Ignore background typing broadcast failures
+    }
+  }
+
+  Future<ChatUserTypingData?> getTyping(int conversationId) async {
+    try {
+      final res = await _dio.get('/conversations/$conversationId/typing');
+      final data = res.data['data'];
+      if (data != null && data is Map && data['is_typing'] == true) {
+        return ChatUserTypingData.fromJson(Map<String, dynamic>.from(data));
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 

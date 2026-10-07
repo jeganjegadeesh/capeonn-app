@@ -9,10 +9,10 @@ class AppConfig {
   // ===========================================================================
 
   // ---> DEV URL (Active)
-  // static String get apiBaseUrl => devUrl;
+  static String get apiBaseUrl => devUrl;
 
   // ---> LOCAL URL (Uncomment line below and comment out DEV line above to use local)
-  static String get apiBaseUrl => localUrl;
+  // static String get apiBaseUrl => localUrl;
 
   // ===========================================================================
   // URL DEFINITIONS
@@ -33,26 +33,33 @@ class AppConfig {
   static String get deviceName => kIsWeb ? 'web' : defaultTargetPlatform.name;
 
   /// Resolves an asset/attachment URL to an absolute, reachable URL across all platforms.
-  static String resolveFileUrl(String? rawUrl) {
+  static String resolveFileUrl(String? rawUrl, {String? token}) {
     if (rawUrl == null || rawUrl.trim().isEmpty) return '';
-    final url = rawUrl.trim();
+    var url = rawUrl.trim();
 
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        if (url.contains('localhost:8000') || url.contains('127.0.0.1:8000')) {
-          return url.replaceAll('localhost:8000', '10.0.2.2:8000').replaceAll('127.0.0.1:8000', '10.0.2.2:8000');
-        }
-        if (url.contains('localhost') && !url.contains('10.0.2.2')) {
-          return url.replaceAll('localhost', '10.0.2.2');
-        }
-      }
-      return url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      // Relative path (e.g. /storage/uploads/xyz.png)
+      final serverBase = apiBaseUrl.replaceAll('/api/v1', '');
+      final cleanPath = url.startsWith('/') ? url : '/$url';
+      url = '$serverBase$cleanPath';
     }
 
-    // Relative path (e.g. /storage/uploads/xyz.png)
-    final serverBase = apiBaseUrl.replaceAll('/api/v1', '');
-    final cleanPath = url.startsWith('/') ? url : '/$url';
-    return '$serverBase$cleanPath';
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      if (url.contains('localhost:8000') || url.contains('127.0.0.1:8000')) {
+        url = url.replaceAll('localhost:8000', '10.0.2.2:8000').replaceAll('127.0.0.1:8000', '10.0.2.2:8000');
+      }
+      if (url.contains('localhost') && !url.contains('10.0.2.2')) {
+        url = url.replaceAll('localhost', '10.0.2.2');
+      }
+    }
+
+    // Append auth token if provided and not already present
+    if (token != null && token.isNotEmpty && !url.contains('token=')) {
+      final sep = url.contains('?') ? '&' : '?';
+      url = '$url${sep}token=${Uri.encodeComponent(token)}';
+    }
+
+    return url;
   }
 
   // ===========================================================================
@@ -65,8 +72,14 @@ class AppConfig {
   /// falls back to automatic HTTP polling without errors or disruption.
   static const bool wsEnabled = true;
 
-  /// WebSocket host (10.0.2.2 on Android emulator, 127.0.0.1 on Web / Desktop)
+  /// WebSocket host (dynamically matches apiBaseUrl host if remote)
   static String get wsHost {
+    try {
+      final uri = Uri.parse(apiBaseUrl);
+      if (uri.host.isNotEmpty && uri.host != 'localhost' && uri.host != '127.0.0.1' && uri.host != '10.0.2.2') {
+        return uri.host;
+      }
+    } catch (_) {}
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return '10.0.2.2';
     }

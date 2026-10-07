@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:capeonn_app/core/config/app_config.dart';
+import 'package:capeonn_app/core/services/file_download_service.dart';
 import 'package:capeonn_app/features/chat/data/chat_models.dart';
 
 void main() {
@@ -51,6 +52,19 @@ void main() {
       expect(model.isImage, isTrue);
       expect(model.url.startsWith('http'), isTrue);
       expect(model.url.contains('/storage/projects/3/architecture_diagram.png'), isTrue);
+    });
+
+    test('AppConfig.resolveFileUrl correctly appends token parameter', () {
+      final resolved = AppConfig.resolveFileUrl('/api/v1/attachments/5/download', token: 'test-token-123');
+      expect(resolved.contains('token=test-token-123'), isTrue);
+    });
+
+    test('FileDownloadService.getMediaTypeFolder categorizes files correctly', () {
+      expect(FileDownloadService.getMediaTypeFolder('photo.PNG', 'image/png'), equals('images'));
+      expect(FileDownloadService.getMediaTypeFolder('report.pdf', 'application/pdf'), equals('pdf'));
+      expect(FileDownloadService.getMediaTypeFolder('clip.mp4', 'video/mp4'), equals('videos'));
+      expect(FileDownloadService.getMediaTypeFolder('audio.mp3', 'audio/mpeg'), equals('audio'));
+      expect(FileDownloadService.getMediaTypeFolder('data.xlsx', 'application/vnd.ms-excel'), equals('documents'));
     });
   });
 }
