@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/auth_user.dart';
+import '../../chat/application/presence_controller.dart';
+import '../../notifications/application/notification_controller.dart';
+import '../../notifications/presentation/notifications_dialog.dart';
 import '../../tasks/presentation/widgets/active_timer_banner.dart';
 
 class AppShell extends ConsumerWidget {
@@ -81,6 +85,21 @@ class AppShell extends ConsumerWidget {
           ],
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadAsync = ref.watch(notificationUnreadCountProvider);
+              final count = unreadAsync.value ?? 0;
+              return IconButton(
+                tooltip: 'Notifications',
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text('$count', style: const TextStyle(fontSize: 10)),
+                  child: const Icon(Icons.notifications_outlined, size: 22),
+                ),
+                onPressed: () => NotificationsDialog.show(context),
+              );
+            },
+          ),
           const ThemeToggleButton(compact: true),
           IconButton(
             tooltip: 'Change Password',
@@ -321,6 +340,21 @@ class _Sidebar extends StatelessWidget {
                     ],
                   ),
                 ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final unreadAsync = ref.watch(notificationUnreadCountProvider);
+                    final count = unreadAsync.value ?? 0;
+                    return IconButton(
+                      tooltip: 'Notifications',
+                      icon: Badge(
+                        isLabelVisible: count > 0,
+                        label: Text('$count', style: const TextStyle(fontSize: 9)),
+                        child: const Icon(Icons.notifications_outlined, size: 20),
+                      ),
+                      onPressed: () => NotificationsDialog.show(context),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -360,16 +394,16 @@ class _Sidebar extends StatelessWidget {
 
           const Divider(height: 1),
 
-          // Theme Switcher
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          // Appearance & Privacy
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
+                const Padding(
                   padding: EdgeInsets.only(left: 4, bottom: 6),
                   child: Text(
-                    'APPEARANCE',
+                    'APPEARANCE & PRIVACY',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -378,7 +412,48 @@ class _Sidebar extends StatelessWidget {
                     ),
                   ),
                 ),
-                ThemeSegmentedSwitch(),
+                const ThemeSegmentedSwitch(),
+                const SizedBox(height: 6),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final presence = ref.watch(presenceProvider);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                presence.hidePresence ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Hide Online Status',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                          Transform.scale(
+                            scale: 0.75,
+                            child: Switch(
+                              value: presence.hidePresence,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (val) async {
+                                await ref.read(presenceProvider.notifier).setPrivacy(val);
+                                if (context.mounted) {
+                                  AppToast.info(context, val ? 'Online status hidden' : 'Online status visible');
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),

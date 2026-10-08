@@ -25,4 +25,19 @@ class TokenStorage {
     final prefs = await _getPrefs();
     await prefs.remove(_key);
   }
+
+  Future<String?> readKey(String key) async {
+    final prefs = await _getPrefs();
+    return prefs.getString(key);
+  }
+
+  Future<void> writeKey(String key, String value) async {
+    final prefs = await _getPrefs();
+    await prefs.setString(key, value);
+  }
+
+  Future<void> deleteKey(String key) async {
+    final prefs = await _getPrefs();
+    await prefs.remove(key);
+  }
 }

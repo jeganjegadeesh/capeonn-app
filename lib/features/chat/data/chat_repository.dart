@@ -144,6 +144,7 @@ class ChatRepository {
     int? replyToId,
     int? taskId,
     List<Map<String, dynamic>>? attachments,
+    List<int>? mentions,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -154,6 +155,9 @@ class ChatRepository {
       if (taskId != null) body['task_id'] = taskId;
       if (attachments != null && attachments.isNotEmpty) {
         body['attachments'] = attachments;
+      }
+      if (mentions != null && mentions.isNotEmpty) {
+        body['mentions'] = mentions;
       }
 
       final res = await _dio.post('/conversations/$conversationId/messages', data: body);
@@ -235,7 +239,7 @@ class ChatRepository {
       final res = await _dio.post('/uploads', data: formData);
       final data = res.data['data'] as Map;
       return ChatAttachmentModel(
-        id: 0,
+        id: (data['id'] as num?)?.toInt() ?? 0,
         fileName: fileName,
         filePath: data['path'] as String,
         fileSize: bytes.length,
@@ -243,6 +247,39 @@ class ChatRepository {
         url: data['url'] as String,
         createdAt: DateTime.now(),
       );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<ConversationModel> updateConversation(
+    int conversationId, {
+    String? title,
+    String? description,
+    int? avatarUploadId,
+    String? avatarUrl,
+    bool clearDescription = false,
+    bool clearAvatar = false,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (title != null && title.trim().isNotEmpty) {
+        body['title'] = title.trim();
+      }
+      if (clearDescription) {
+        body['description'] = null;
+      } else if (description != null) {
+        body['description'] = description.trim();
+      }
+      if (clearAvatar) {
+        body['avatar_url'] = null;
+      } else {
+        if (avatarUploadId != null) body['avatar_upload_id'] = avatarUploadId;
+        if (avatarUrl != null) body['avatar_url'] = avatarUrl;
+      }
+
+      final res = await _dio.put('/conversations/$conversationId', data: body);
+      return ConversationModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
@@ -267,11 +304,18 @@ class ChatRepository {
     }
   }
 
-  Future<ChatMessageModel> editMessage(int conversationId, int messageId, String newText) async {
+  Future<ChatMessageModel> editMessage(
+    int conversationId,
+    int messageId,
+    String newText, {
+    List<int>? mentions,
+  }) async {
     try {
-      final res = await _dio.put('/conversations/$conversationId/messages/$messageId', data: {
-        'message': newText,
-      });
+      final body = <String, dynamic>{'message': newText};
+      if (mentions != null && mentions.isNotEmpty) {
+        body['mentions'] = mentions;
+      }
+      final res = await _dio.put('/conversations/$conversationId/messages/$messageId', data: body);
       return ChatMessageModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

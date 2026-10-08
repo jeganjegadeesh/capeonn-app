@@ -2,12 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../employees/data/employee_model.dart';
 import '../../application/chat_controller.dart';
 import '../../data/chat_repository.dart';
+
+String _mapError(dynamic e, {String fallback = 'Failed to create group'}) {
+  if (e is ApiException) {
+    if (e.statusCode == 403) return 'You do not have permission to create group chats.';
+    if (e.statusCode == 422) return e.message.isNotEmpty ? e.message : 'Invalid group details.';
+    if (e.message.isNotEmpty) return e.message;
+  }
+  final s = e.toString().replaceFirst('Exception: ', '');
+  if (s.contains('403')) return 'You do not have permission to create group chats.';
+  if (s.contains('422')) return 'Invalid group title or participants.';
+  return s.isNotEmpty ? s : fallback;
+}
 
 class NewGroupChatDialog extends ConsumerStatefulWidget {
   const NewGroupChatDialog({super.key});
@@ -63,7 +76,7 @@ class _NewGroupChatDialogState extends ConsumerState<NewGroupChatDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = _mapError(e, fallback: 'Failed to load colleagues');
           _isLoading = false;
         });
       }
@@ -97,7 +110,7 @@ class _NewGroupChatDialogState extends ConsumerState<NewGroupChatDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isCreating = false);
-        AppToast.error(context, 'Failed to create group: $e');
+        AppToast.error(context, _mapError(e, fallback: 'Failed to create group'));
       }
     }
   }

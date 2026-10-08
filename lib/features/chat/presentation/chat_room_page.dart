@@ -32,6 +32,7 @@ class ChatRoomPage extends ConsumerStatefulWidget {
 class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  final _focusNode = FocusNode();
   bool _isSending = false;
   List<Map<String, dynamic>> _pendingAttachments = [];
   TaskItem? _selectedTask;
@@ -39,6 +40,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   bool _isCurrentlyTyping = false;
   DateTime? _lastTypingSent;
   List<ConversationParticipantModel> _mentionSuggestions = [];
+  final Map<String, int> _selectedMentions = {};
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     if (_isCurrentlyTyping) {
       ref.read(chatRepositoryProvider).sendTyping(widget.conversationId, false);
     }
+    _focusNode.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -135,6 +138,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       final suffix = text.substring(cursor);
       final mentionText = '@${p.name} ';
       final newText = '$prefix$mentionText$suffix';
+      _selectedMentions['@${p.name}'] = p.userId;
       _messageController.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: prefix.length + mentionText.length),
@@ -206,6 +210,13 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     final atts = List<Map<String, dynamic>>.from(_pendingAttachments);
     final taskId = _selectedTask?.id;
 
+    final mentionedIds = _selectedMentions.entries
+        .where((e) => text.contains(e.key))
+        .map((e) => e.value)
+        .toSet()
+        .toList();
+    _selectedMentions.clear();
+
     _messageController.clear();
     setState(() {
       _pendingAttachments = [];
@@ -223,41 +234,262 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         message: text.isNotEmpty ? text : null,
         taskId: taskId,
         attachments: atts.isNotEmpty ? atts : null,
+        mentions: mentionedIds.isNotEmpty ? mentionedIds : null,
       );
     } catch (e) {
       if (mounted) {
-        String msg = 'Failed to send message';
-        if (e is ApiException) {
-          if (e.statusCode == 403) {
-            msg = 'You do not have permission to send messages here.';
-          } else if (e.statusCode == 404) {
-            msg = 'Conversation or resource not found.';
-          } else if (e.statusCode == 413) {
-            msg = 'Attachment exceeds the allowed size limit (20 MB).';
-          } else if (e.statusCode == 422) {
-            msg = e.message.isNotEmpty ? e.message : 'Validation failed. Please verify your input.';
-          } else {
-            msg = e.message;
-          }
-        } else {
-          final s = e.toString().replaceFirst('Exception: ', '');
-          if (s.contains('403')) {
-            msg = 'You do not have permission to post in this chat.';
-          } else if (s.contains('413')) {
-            msg = 'File exceeds upload size limit (20 MB).';
-          } else if (s.contains('422')) {
-            msg = 'Invalid message or attachment.';
-          } else {
-            msg = s;
-          }
-        }
-        AppToast.error(context, msg);
+        AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to send message'));
       }
     } finally {
       if (mounted) {
         setState(() => _isSending = false);
+        _focusNode.requestFocus();
       }
     }
+  }
+
+  String _friendlyErrorMessage(dynamic error, {String fallback = 'An error occurred'}) {
+    if (error is ApiException) {
+      switch (error.statusCode) {
+        case 403:
+          return 'You do not have permission to perform this action.';
+        case 404:
+          return 'The conversation or requested item was not found.';
+        case 413:
+          return 'Attachment exceeds the allowed size limit (20 MB).';
+        case 422:
+          return error.message.isNotEmpty ? error.message : 'Invalid input or validation failed.';
+        default:
+          return error.message.isNotEmpty ? error.message : fallback;
+      }
+    }
+    final s = error.toString().replaceFirst('Exception: ', '');
+    if (s.contains('403')) return 'You do not have permission to perform this action.';
+    if (s.contains('404')) return 'The requested resource was not found.';
+    if (s.contains('413')) return 'File exceeds upload limit (20 MB).';
+    if (s.contains('422')) return 'Invalid input provided.';
+    return s.isNotEmpty ? s : fallback;
+  }
+
+  Future<void> _togglePin(ChatMessageModel msg) async {
+    try {
+      await ref.read(chatRoomProvider(widget.conversationId).notifier).togglePinMessage(msg.id);
+      if (mounted) {
+        AppToast.success(context, msg.isPinned ? 'Message unpinned' : 'Message pinned');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to update pin'));
+      }
+    }
+  }
+
+  void _showEditMessageDialog(ChatMessageModel msg) {
+    final editCtrl = TextEditingController(text: msg.message ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Message'),
+        content: SizedBox(
+          width: 440,
+          child: TextField(
+            controller: editCtrl,
+            maxLines: 4,
+            minLines: 2,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Edit your message...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            onPressed: () async {
+              final newText = editCtrl.text.trim();
+              if (newText.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await ref.read(chatRoomProvider(widget.conversationId).notifier).editMessage(msg.id, newText);
+                if (mounted) {
+                  AppToast.success(context, 'Message updated');
+                }
+              } catch (e) {
+                if (mounted) {
+                  AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to edit message'));
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPinnedMessagesDialog(BuildContext context, List<ChatMessageModel> pinnedMessages) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.push_pin, color: AppColors.amber),
+            const SizedBox(width: 8),
+            Text('Pinned Messages (${pinnedMessages.length})'),
+          ],
+        ),
+        content: SizedBox(
+          width: 440,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: pinnedMessages.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (dialogContext, i) {
+              final m = pinnedMessages[i];
+              return ListTile(
+                dense: true,
+                leading: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  child: Text(
+                    m.userName.isNotEmpty ? m.userName[0].toUpperCase() : 'U',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ),
+                title: Text(m.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                subtitle: Text(m.message ?? 'Attachment', maxLines: 2, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(
+                  icon: const Icon(Icons.pin_drop, size: 18, color: AppColors.rose),
+                  tooltip: 'Unpin',
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _togglePin(m);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showGroupSettingsDialog(BuildContext context, ConversationModel conv) async {
+    final titleCtrl = TextEditingController(text: conv.displayName);
+    final descCtrl = TextEditingController(text: conv.description ?? '');
+    int? uploadedAvatarId;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          title: const Text('Group Settings'),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Group Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.upload, size: 16),
+                        label: Text(uploadedAvatarId != null ? 'Avatar Uploaded' : 'Upload Group Icon'),
+                        onPressed: () async {
+                          try {
+                            final files = await FilePicker.pickFiles(type: FileType.image);
+                            if (files.isNotEmpty) {
+                              final f = files.first;
+                              final bytes = await f.readAsBytes();
+                              final uploaded = await ref.read(chatRepositoryProvider).uploadAttachment(
+                                bytes,
+                                f.name,
+                                mimeType: 'image/png',
+                              );
+                              setDialogState(() {
+                                uploadedAvatarId = uploaded.id;
+                              });
+                            }
+                          } catch (_) {
+                            if (context.mounted) {
+                              AppToast.error(context, 'Failed to upload icon');
+                            }
+                          }
+                        },
+                      ),
+                      if (conv.avatarUrl != null || uploadedAvatarId != null) ...[
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              uploadedAvatarId = null;
+                            });
+                          },
+                          child: const Text('Remove Icon', style: TextStyle(color: AppColors.rose)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () async {
+                final newTitle = titleCtrl.text.trim();
+                if (newTitle.isEmpty) return;
+                Navigator.pop(dialogCtx);
+                try {
+                  await ref.read(chatRoomProvider(widget.conversationId).notifier).updateGroupSettings(
+                    title: newTitle,
+                    description: descCtrl.text.trim(),
+                    clearDescription: descCtrl.text.trim().isEmpty,
+                    avatarUploadId: uploadedAvatarId,
+                  );
+                  if (context.mounted) {
+                    AppToast.success(context, 'Group settings updated');
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to update group'));
+                  }
+                }
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showActionMenu(BuildContext context, ConversationModel conv) {
@@ -465,13 +697,27 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     if (isGroupAdmin)
-                      TextButton.icon(
-                        icon: const Icon(Icons.person_add, size: 16),
-                        label: const Text('Add'),
-                        onPressed: () {
-                          Navigator.pop(dialogCtx);
-                          _showAddParticipantDialog(context, conv);
-                        },
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.settings, size: 14),
+                            label: const Text('Settings'),
+                            onPressed: () {
+                              Navigator.pop(dialogCtx);
+                              _showGroupSettingsDialog(context, conv);
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          TextButton.icon(
+                            icon: const Icon(Icons.person_add, size: 14),
+                            label: const Text('Add'),
+                            onPressed: () {
+                              Navigator.pop(dialogCtx);
+                              _showAddParticipantDialog(context, conv);
+                            },
+                          ),
+                        ],
                       ),
                   ],
                 ),
@@ -515,7 +761,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                                   }
                                 } catch (e) {
                                   if (context.mounted) {
-                                    AppToast.error(context, 'Failed to remove: $e');
+                                    AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to remove member'));
                                   }
                                 }
                               },
@@ -561,7 +807,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      AppToast.error(context, 'Failed to leave group: $e');
+                      AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to leave group'));
                     }
                   }
                 }
@@ -634,7 +880,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          AppToast.error(context, 'Failed to add members: $e');
+                          AppToast.error(context, _friendlyErrorMessage(e, fallback: 'Failed to add members'));
                         }
                       }
                     },
@@ -778,9 +1024,47 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         ],
       ),
       body: chatStateAsync.when(
-        data: (state) => Column(
-          children: [
-            // Messages View
+        data: (state) {
+          final pinnedMessages = state.messages.where((m) => m.isPinned).toList();
+          final conv = state.conversation;
+          final isGroupAdmin = conv.isGroup &&
+              conv.participants.any((p) => p.userId == currentUser?.id && p.role == 'admin');
+          final canPin = conv.isDirect ||
+              isGroupAdmin ||
+              (currentUser?.isSuperAdmin == true) ||
+              (conv.isProject && (currentUser?.isManager == true || currentUser?.isTeamLead == true));
+
+          return Column(
+            children: [
+              // Pinned Messages Banner
+              if (pinnedMessages.isNotEmpty)
+                Container(
+                  key: const ValueKey('chat_pinned_banner'),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: 0.12),
+                    border: Border(bottom: BorderSide(color: AppColors.amber.withValues(alpha: 0.3))),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.push_pin, size: 16, color: AppColors.amber),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Pinned: ${pinnedMessages.first.userName}: ${pinnedMessages.first.message ?? "Attachment"}',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (pinnedMessages.length > 1)
+                        TextButton(
+                          onPressed: () => _showPinnedMessagesDialog(context, pinnedMessages),
+                          child: Text('All (${pinnedMessages.length})', style: const TextStyle(fontSize: 11)),
+                        ),
+                    ],
+                  ),
+                ),
+              // Messages View
             Expanded(
               child: state.messages.isEmpty
                   ? Center(
@@ -820,12 +1104,18 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                         return _MessageBubble(
                           message: msg,
                           isSelf: isSelf,
-                          onReply: () => ref
-                              .read(chatRoomProvider(widget.conversationId).notifier)
-                              .setReplyingTo(msg),
+                          canPin: canPin,
+                          onReply: () {
+                            ref
+                                .read(chatRoomProvider(widget.conversationId).notifier)
+                                .setReplyingTo(msg);
+                            _focusNode.requestFocus();
+                          },
                           onDelete: () => ref
                               .read(chatRoomProvider(widget.conversationId).notifier)
                               .deleteMessage(msg.id),
+                          onEdit: () => _showEditMessageDialog(msg),
+                          onPinToggle: () => _togglePin(msg),
                         );
                       },
                     ),
@@ -834,6 +1124,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             // Pending Attachments Bar
             if (_pendingAttachments.isNotEmpty)
               Container(
+                key: const ValueKey('chat_pending_attachments'),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 color: Theme.of(context).cardColor,
                 child: Row(
@@ -858,6 +1149,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             // Pending Task Link Bar
             if (_selectedTask != null)
               Container(
+                key: const ValueKey('chat_pending_task'),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
@@ -885,6 +1177,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             // Replying To Banner
             if (state.replyingTo != null)
               Container(
+                key: const ValueKey('chat_replying_banner'),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
@@ -928,6 +1221,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             // Mention Suggestions Popup
             if (_mentionSuggestions.isNotEmpty)
               Container(
+                key: const ValueKey('chat_mention_suggestions'),
                 constraints: const BoxConstraints(maxHeight: 180),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
@@ -966,6 +1260,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             // Live Partner Typing Banner
             if (state.isPartnerTyping)
               Container(
+                key: const ValueKey('chat_partner_typing_banner'),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.emerald.withValues(alpha: 0.08),
@@ -994,6 +1289,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
 
             // Input Row
             Container(
+              key: const ValueKey('chat_input_container'),
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -1009,7 +1305,9 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                     ),
                     Expanded(
                       child: TextField(
+                        key: const ValueKey('chat_message_text_field'),
                         controller: _messageController,
+                        focusNode: _focusNode,
                         onChanged: (text) => _onTextChanged(text, state.conversation),
                         textInputAction: TextInputAction.send,
                         keyboardType: TextInputType.multiline,
@@ -1050,13 +1348,14 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
               ),
             ),
           ],
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Failed to load chat: $err', style: TextStyle(color: AppColors.rose)),
+              Text(_friendlyErrorMessage(err, fallback: 'Failed to load chat'), style: TextStyle(color: AppColors.rose)),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () => ref.invalidate(chatRoomProvider(widget.conversationId)),
@@ -1076,12 +1375,18 @@ class _MessageBubble extends StatelessWidget {
     required this.isSelf,
     required this.onReply,
     required this.onDelete,
+    this.onEdit,
+    this.onPinToggle,
+    this.canPin = false,
   });
 
   final ChatMessageModel message;
   final bool isSelf;
   final VoidCallback onReply;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onPinToggle;
+  final bool canPin;
 
   String _formatTime(DateTime? dt) {
     if (dt == null) return '';
@@ -1092,6 +1397,11 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context) {
+    final canEdit = isSelf &&
+        message.message != null &&
+        message.message!.isNotEmpty &&
+        (message.createdAt == null || DateTime.now().difference(message.createdAt!).inHours < 24);
+
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -1114,6 +1424,27 @@ class _MessageBubble extends StatelessWidget {
                   Clipboard.setData(ClipboardData(text: message.message!));
                   Navigator.pop(ctx);
                   AppToast.success(context, 'Copied to clipboard');
+                },
+              ),
+            if (canPin && onPinToggle != null)
+              ListTile(
+                leading: Icon(
+                  message.isPinned ? Icons.pin_drop_outlined : Icons.push_pin_outlined,
+                  color: AppColors.amber,
+                ),
+                title: Text(message.isPinned ? 'Unpin Message' : 'Pin Message'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onPinToggle!();
+                },
+              ),
+            if (canEdit && onEdit != null)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit Message'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onEdit!();
                 },
               ),
             if (isSelf)
@@ -1178,6 +1509,27 @@ class _MessageBubble extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: isSelf ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
+                    // Pinned badge indicator
+                    if (message.isPinned)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.push_pin, size: 12, color: AppColors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Pinned${message.pinnedByName != null ? " by ${message.pinnedByName}" : ""}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.amber,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Sender Name (for incoming messages in group chats)
                     if (!isSelf)
                       Padding(
@@ -1319,6 +1671,17 @@ class _MessageBubble extends StatelessWidget {
                             color: isSelf ? Colors.white.withValues(alpha: 0.7) : AppColors.textMuted,
                           ),
                         ),
+                        if (message.isEdited) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '(edited)',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontStyle: FontStyle.italic,
+                              color: isSelf ? Colors.white70 : AppColors.textMuted,
+                            ),
+                          ),
+                        ],
                         if (isSelf) ...[
                           const SizedBox(width: 4),
                           Icon(

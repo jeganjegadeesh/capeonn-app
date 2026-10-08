@@ -53,4 +53,16 @@ class PresenceRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<bool> updatePrivacy({required bool hidePresence}) async {
+    try {
+      final res = await _dio.put('/presence/privacy', data: {
+        'hide_presence': hidePresence,
+      });
+      final data = res.data['data'] as Map<String, dynamic>? ?? {};
+      return data['hide_presence'] as bool? ?? hidePresence;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

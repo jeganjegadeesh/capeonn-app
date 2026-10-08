@@ -12,11 +12,13 @@ class PresenceState {
   const PresenceState({
     this.users = const {},
     this.isSelfOnline = false,
+    this.hidePresence = false,
     this.lastHeartbeatAt,
   });
 
   final Map<int, UserPresenceModel> users;
   final bool isSelfOnline;
+  final bool hidePresence;
   final DateTime? lastHeartbeatAt;
 
   bool isUserOnline(int userId) {
@@ -46,11 +48,13 @@ class PresenceState {
   PresenceState copyWith({
     Map<int, UserPresenceModel>? users,
     bool? isSelfOnline,
+    bool? hidePresence,
     DateTime? lastHeartbeatAt,
   }) {
     return PresenceState(
       users: users ?? this.users,
       isSelfOnline: isSelfOnline ?? this.isSelfOnline,
+      hidePresence: hidePresence ?? this.hidePresence,
       lastHeartbeatAt: lastHeartbeatAt ?? this.lastHeartbeatAt,
     );
   }
@@ -178,6 +182,20 @@ class PresenceNotifier extends Notifier<PresenceState> with WidgetsBindingObserv
       final list = await repo.getPresence(userIds: userIds);
       seedPresences(list);
     } catch (_) {}
+  }
+
+  /// Toggle privacy ("Hide online status")
+  Future<bool> setPrivacy(bool hidePresence) async {
+    final repo = ref.read(presenceRepositoryProvider);
+    final result = await repo.updatePrivacy(hidePresence: hidePresence);
+    state = state.copyWith(
+      hidePresence: result,
+      isSelfOnline: !result,
+    );
+    if (!result) {
+      await sendHeartbeat();
+    }
+    return result;
   }
 }
 

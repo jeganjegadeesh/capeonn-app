@@ -2,12 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../employees/data/employee_model.dart';
 import '../../application/chat_controller.dart';
 import '../../data/chat_repository.dart';
+
+String _mapError(dynamic e, {String fallback = 'Failed to start chat'}) {
+  if (e is ApiException) {
+    if (e.statusCode == 403) return 'You do not have permission to message this employee.';
+    if (e.statusCode == 404) return 'Employee not found.';
+    if (e.message.isNotEmpty) return e.message;
+  }
+  final s = e.toString().replaceFirst('Exception: ', '');
+  if (s.contains('403')) return 'You do not have permission to message this employee.';
+  return s.isNotEmpty ? s : fallback;
+}
 
 class NewDirectChatDialog extends ConsumerStatefulWidget {
   const NewDirectChatDialog({super.key});
@@ -61,7 +73,7 @@ class _NewDirectChatDialogState extends ConsumerState<NewDirectChatDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = _mapError(e, fallback: 'Failed to load colleagues');
           _isLoading = false;
         });
       }
@@ -85,7 +97,7 @@ class _NewDirectChatDialogState extends ConsumerState<NewDirectChatDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isCreating = false);
-        AppToast.error(context, 'Failed to start chat: $e');
+        AppToast.error(context, _mapError(e, fallback: 'Failed to start chat'));
       }
     }
   }

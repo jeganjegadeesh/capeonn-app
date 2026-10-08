@@ -85,6 +85,9 @@ class ChatMessageModel {
     this.attachments = const [],
     this.isEdited = false,
     this.editedAt,
+    this.isPinned = false,
+    this.pinnedAt,
+    this.pinnedByName,
     this.createdAt,
   });
 
@@ -107,17 +110,73 @@ class ChatMessageModel {
   final List<ChatAttachmentModel> attachments;
   final bool isEdited;
   final DateTime? editedAt;
+  final bool isPinned;
+  final DateTime? pinnedAt;
+  final String? pinnedByName;
   final DateTime? createdAt;
 
   bool get isSystem => type == 'system';
   bool get hasAttachments => attachments.isNotEmpty;
   bool get hasTaskLink => taskId != null && taskId! > 0;
 
+  ChatMessageModel copyWith({
+    int? id,
+    int? conversationId,
+    int? userId,
+    String? userName,
+    String? userAvatar,
+    String? userRole,
+    String? userRoleSlug,
+    String? message,
+    String? type,
+    int? replyToId,
+    String? replyToMessage,
+    String? replyToUserName,
+    int? taskId,
+    String? taskTitle,
+    String? taskStatus,
+    String? taskPriority,
+    List<ChatAttachmentModel>? attachments,
+    bool? isEdited,
+    DateTime? editedAt,
+    bool? isPinned,
+    DateTime? pinnedAt,
+    String? pinnedByName,
+    DateTime? createdAt,
+  }) {
+    return ChatMessageModel(
+      id: id ?? this.id,
+      conversationId: conversationId ?? this.conversationId,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userAvatar: userAvatar ?? this.userAvatar,
+      userRole: userRole ?? this.userRole,
+      userRoleSlug: userRoleSlug ?? this.userRoleSlug,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      replyToId: replyToId ?? this.replyToId,
+      replyToMessage: replyToMessage ?? this.replyToMessage,
+      replyToUserName: replyToUserName ?? this.replyToUserName,
+      taskId: taskId ?? this.taskId,
+      taskTitle: taskTitle ?? this.taskTitle,
+      taskStatus: taskStatus ?? this.taskStatus,
+      taskPriority: taskPriority ?? this.taskPriority,
+      attachments: attachments ?? this.attachments,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
+      isPinned: isPinned ?? this.isPinned,
+      pinnedAt: pinnedAt ?? this.pinnedAt,
+      pinnedByName: pinnedByName ?? this.pinnedByName,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     final user = json['user'] is Map ? json['user'] as Map : const {};
     final replyTo = json['reply_to'] is Map ? json['reply_to'] as Map : null;
     final replyToUser = replyTo != null && replyTo['user'] is Map ? replyTo['user'] as Map : null;
     final task = json['task'] is Map ? json['task'] as Map : null;
+    final pinnedBy = json['pinned_by'] is Map ? json['pinned_by'] as Map : null;
 
     final rawAtts = json['attachments'];
     final attsList = rawAtts is List
@@ -146,6 +205,11 @@ class ChatMessageModel {
       attachments: attsList,
       isEdited: json['is_edited'] as bool? ?? false,
       editedAt: json['edited_at'] != null ? DateTime.tryParse(json['edited_at'].toString()) : null,
+      isPinned: json['is_pinned'] as bool? ?? false,
+      pinnedAt: json['pinned_at'] != null ? DateTime.tryParse(json['pinned_at'].toString()) : null,
+      pinnedByName: pinnedBy != null
+          ? (pinnedBy['name'] as String?)
+          : (json['pinned_by_name'] as String?),
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
     );
   }
@@ -234,6 +298,8 @@ class ConversationModel {
     required this.id,
     required this.type,
     this.title,
+    this.description,
+    this.avatarUrl,
     required this.displayName,
     this.projectId,
     this.projectName,
@@ -255,6 +321,8 @@ class ConversationModel {
   final int id;
   final String type; // direct, group, project
   final String? title;
+  final String? description;
+  final String? avatarUrl;
   final String displayName;
   final int? projectId;
   final String? projectName;
@@ -308,6 +376,8 @@ class ConversationModel {
       id: (json['id'] as num?)?.toInt() ?? 0,
       type: json['type'] as String? ?? 'direct',
       title: title,
+      description: json['description'] as String?,
+      avatarUrl: json['avatar_url'] as String? ?? json['avatar'] as String?,
       displayName: json['display_name'] as String? ?? title ?? projName ?? 'Chat',
       projectId: (json['project_id'] as num?)?.toInt(),
       projectName: proj != null ? proj['name'] as String? : null,

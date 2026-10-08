@@ -267,5 +267,26 @@ void main() {
       expect(p2.isAdmin, isFalse);
       expect(p2.name, equals('Member User'));
     });
+
+    test('ChatMessageModel parses pinned status and copyWith updates', () {
+      final msg = ChatMessageModel.fromJson({
+        'id': 201,
+        'conversation_id': 10,
+        'user_id': 5,
+        'message': 'Pinned announcement',
+        'is_pinned': true,
+        'pinned_at': '2026-10-08T10:00:00.000Z',
+        'pinned_by_name': 'Alice Manager',
+        'is_edited': true,
+      });
+
+      expect(msg.isPinned, isTrue);
+      expect(msg.pinnedByName, equals('Alice Manager'));
+      expect(msg.isEdited, isTrue);
+
+      final unpinned = msg.copyWith(isPinned: false);
+      expect(unpinned.isPinned, isFalse);
+      expect(unpinned.id, equals(201));
+    });
   });
 }

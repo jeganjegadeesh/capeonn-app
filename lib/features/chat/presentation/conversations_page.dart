@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/chat_controller.dart';
 import '../data/chat_models.dart';
@@ -9,6 +10,27 @@ import '../application/presence_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import 'widgets/new_direct_chat_dialog.dart';
 import 'widgets/new_group_chat_dialog.dart';
+
+String _friendlyError(dynamic error, {String fallback = 'An error occurred'}) {
+  if (error is ApiException) {
+    switch (error.statusCode) {
+      case 403:
+        return 'Access denied. You do not have permission.';
+      case 404:
+        return 'Resource not found.';
+      case 413:
+        return 'File size limit exceeded.';
+      case 422:
+        return error.message.isNotEmpty ? error.message : 'Invalid request.';
+      default:
+        return error.message.isNotEmpty ? error.message : fallback;
+    }
+  }
+  final s = error.toString().replaceFirst('Exception: ', '');
+  if (s.contains('403')) return 'Access denied.';
+  if (s.contains('404')) return 'Not found.';
+  return s.isNotEmpty ? s : fallback;
+}
 
 class ConversationsPage extends ConsumerStatefulWidget {
   const ConversationsPage({super.key});
@@ -327,7 +349,7 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Failed to load conversations: $err', style: TextStyle(color: AppColors.rose)),
+                          Text(_friendlyError(err, fallback: 'Failed to load conversations'), style: TextStyle(color: AppColors.rose)),
                           const SizedBox(height: 8),
                           ElevatedButton(
                             onPressed: () => ref.invalidate(conversationsListProvider),
@@ -617,7 +639,7 @@ class _MessageSearchResultsView extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Search failed: $err', style: const TextStyle(color: AppColors.rose)),
+            Text(_friendlyError(err, fallback: 'Search failed'), style: const TextStyle(color: AppColors.rose)),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () => ref.invalidate(messageSearchResultsProvider(query)),

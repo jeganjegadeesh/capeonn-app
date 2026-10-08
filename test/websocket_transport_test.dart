@@ -118,5 +118,60 @@ void main() {
       expect(msg.attachments.first.isImage, isTrue);
       expect(msg.attachments.first.fileName, equals('diagram.png'));
     });
+
+    test('ChatRoomState accurately clears replyingTo with clearReply flag', () {
+      const conv = ConversationModel(
+        id: 1,
+        type: 'direct',
+        title: null,
+        displayName: 'Alice',
+        participants: [],
+      );
+
+      final msg = const ChatMessageModel(
+        id: 10,
+        conversationId: 1,
+        userId: 2,
+        userName: 'Alice',
+        message: 'Original message',
+        type: 'text',
+        attachments: [],
+      );
+
+      final state = const ChatRoomState(
+        conversation: conv,
+        messages: [],
+      );
+
+      final replyingState = state.copyWith(replyingTo: msg);
+      expect(replyingState.replyingTo, isNotNull);
+      expect(replyingState.replyingTo?.id, equals(10));
+
+      // Sending message clears reply
+      final clearedState = replyingState.copyWith(
+        messages: [msg],
+        clearReply: true,
+      );
+      expect(clearedState.replyingTo, isNull);
+    });
+
+    test('ChatUserTypingData allows distinguishing current user vs partner typing', () {
+      final currentUserId = 5;
+      final ownTyping = const ChatUserTypingData(
+        conversationId: 1,
+        userId: 5,
+        userName: 'Myself',
+        isTyping: true,
+      );
+      final partnerTyping = const ChatUserTypingData(
+        conversationId: 1,
+        userId: 8,
+        userName: 'Partner',
+        isTyping: true,
+      );
+
+      expect(ownTyping.userId == currentUserId, isTrue);
+      expect(partnerTyping.userId == currentUserId, isFalse);
+    });
   });
 }

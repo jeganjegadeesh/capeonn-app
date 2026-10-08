@@ -67,6 +67,48 @@ class ChatMessageReadData {
   }
 }
 
+/// Message deleted payload received over WebSocket
+class ChatMessageDeletedData {
+  const ChatMessageDeletedData({
+    required this.conversationId,
+    required this.messageId,
+    this.deletedById,
+    this.deletedAt,
+  });
+
+  final int conversationId;
+  final int messageId;
+  final int? deletedById;
+  final String? deletedAt;
+
+  factory ChatMessageDeletedData.fromJson(Map<String, dynamic> json) {
+    return ChatMessageDeletedData(
+      conversationId: (json['conversation_id'] as num?)?.toInt() ?? 0,
+      messageId: (json['message_id'] as num?)?.toInt() ?? 0,
+      deletedById: (json['deleted_by_id'] as num?)?.toInt(),
+      deletedAt: json['deleted_at'] as String?,
+    );
+  }
+}
+
+/// Message pinned payload received over WebSocket
+class ChatMessagePinnedData {
+  const ChatMessagePinnedData({
+    required this.isPinned,
+    required this.message,
+  });
+
+  final bool isPinned;
+  final ChatMessageModel message;
+
+  factory ChatMessagePinnedData.fromJson(Map<String, dynamic> json) {
+    return ChatMessagePinnedData(
+      isPinned: json['is_pinned'] as bool? ?? true,
+      message: ChatMessageModel.fromJson(json['message'] as Map<String, dynamic>),
+    );
+  }
+}
+
 class _ConversationSubscriptions {
   _ConversationSubscriptions({
     required this.channel,
@@ -103,6 +145,12 @@ class ChatWebSocketService {
       StreamController<ChatMessageReadData>.broadcast();
   final StreamController<UserPresenceModel> _presenceController =
       StreamController<UserPresenceModel>.broadcast();
+  final StreamController<ChatMessageDeletedData> _messageDeletedController =
+      StreamController<ChatMessageDeletedData>.broadcast();
+  final StreamController<ChatMessageModel> _messageUpdatedController =
+      StreamController<ChatMessageModel>.broadcast();
+  final StreamController<ChatMessagePinnedData> _messagePinnedController =
+      StreamController<ChatMessagePinnedData>.broadcast();
 
   final Map<int, _ConversationSubscriptions> _activeChannels = {};
   final Map<int, _ConversationSubscriptions> _companyChannels = {};
@@ -119,6 +167,12 @@ class ChatWebSocketService {
   Stream<ChatMessageReadData> get readReceiptStream =>
       _readReceiptController.stream;
   Stream<UserPresenceModel> get presenceStream => _presenceController.stream;
+  Stream<ChatMessageDeletedData> get messageDeletedStream =>
+      _messageDeletedController.stream;
+  Stream<ChatMessageModel> get messageUpdatedStream =>
+      _messageUpdatedController.stream;
+  Stream<ChatMessagePinnedData> get messagePinnedStream =>
+      _messagePinnedController.stream;
 
   void _setStatus(WebSocketStatus newStatus) {
     if (_status != newStatus) {
@@ -290,6 +344,51 @@ class ChatWebSocketService {
       });
       subs.add(readSub);
 
+      // 4. Bind message.deleted
+      final deleteBind = channel.bind('message.deleted');
+      final deleteSub = deleteBind.listen((ChannelReadEvent event) {
+        try {
+          final map = _decodeData(event.data);
+          if (map != null) {
+            _messageDeletedController.add(ChatMessageDeletedData.fromJson(map));
+          }
+        } catch (e) {
+          debugPrint('Error parsing message.deleted: $e');
+        }
+      });
+      subs.add(deleteSub);
+
+      // 5. Bind message.updated
+      final updateBind = channel.bind('message.updated');
+      final updateSub = updateBind.listen((ChannelReadEvent event) {
+        try {
+          final map = _decodeData(event.data);
+          if (map != null && map.containsKey('message')) {
+            final msgMap = map['message'];
+            if (msgMap is Map<String, dynamic>) {
+              _messageUpdatedController.add(ChatMessageModel.fromJson(msgMap));
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing message.updated: $e');
+        }
+      });
+      subs.add(updateSub);
+
+      // 6. Bind message.pinned
+      final pinBind = channel.bind('message.pinned');
+      final pinSub = pinBind.listen((ChannelReadEvent event) {
+        try {
+          final map = _decodeData(event.data);
+          if (map != null) {
+            _messagePinnedController.add(ChatMessagePinnedData.fromJson(map));
+          }
+        } catch (e) {
+          debugPrint('Error parsing message.pinned: $e');
+        }
+      });
+      subs.add(pinSub);
+
       channel.subscribeIfNotUnsubscribed();
 
       _activeChannels[conversationId] = _ConversationSubscriptions(
@@ -445,6 +544,9 @@ class ChatWebSocketService {
     await _typingController.close();
     await _readReceiptController.close();
     await _presenceController.close();
+    await _messageDeletedController.close();
+    await _messageUpdatedController.close();
+    await _messagePinnedController.close();
   }
 }
 

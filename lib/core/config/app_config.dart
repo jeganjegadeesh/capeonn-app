@@ -44,8 +44,14 @@ class AppConfig {
   // PUSHER.COM CLOUD SETTINGS
   // (Used when wsMode == WebSocketMode.pusherCloud)
   // ===========================================================================
-  static const String pusherKey = 'a5ce3cd6f0f95243808a';
-  static const String pusherCluster = 'ap2';
+  static const String pusherKey = String.fromEnvironment(
+    'PUSHER_APP_KEY',
+    defaultValue: 'a5ce3cd6f0f95243808a',
+  );
+  static const String pusherCluster = String.fromEnvironment(
+    'PUSHER_APP_CLUSTER',
+    defaultValue: 'ap2',
+  );
 
   // ===========================================================================
   // URL DEFINITIONS
