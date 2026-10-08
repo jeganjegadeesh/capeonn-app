@@ -7,8 +7,8 @@ import 'package:capeonn_app/features/chat/application/chat_controller.dart';
 void main() {
   group('WebSocket Transport & Configuration Tests', () {
     test('AppConfig provides valid WebSocket settings', () {
-      expect(AppConfig.wsPort, equals(6001));
-      expect(AppConfig.wsScheme, equals('ws'));
+      expect(AppConfig.wsPort, anyOf(equals(6001), equals(443)));
+      expect(AppConfig.wsScheme, anyOf(equals('ws'), equals('wss')));
       expect(AppConfig.wsKey, isNotEmpty);
       expect(AppConfig.wsHost, isNotEmpty);
       expect(AppConfig.wsAuthUrl, contains('/broadcasting/auth'));

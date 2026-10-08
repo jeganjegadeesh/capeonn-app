@@ -1,5 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+/// Supported WebSocket transports
+enum WebSocketMode {
+  /// Pusher.com Cloud (recommended for cPanel / Remote Dev Server)
+  pusherCloud,
+
+  /// Local Soketi / Reverb Daemon (for localhost development on port 6001)
+  localServer,
+
+  /// Disabled (operates purely via HTTP Polling fallback)
+  disabled,
+}
+
 class AppConfig {
   AppConfig._();
 
@@ -13,6 +25,27 @@ class AppConfig {
 
   // ---> LOCAL URL (Uncomment line below and comment out DEV line above to use local)
   // static String get apiBaseUrl => localUrl;
+
+  // ===========================================================================
+  // WEBSOCKET MODE CONFIGURATION
+  // Comment / Uncomment ONE line below to switch modes:
+  // ===========================================================================
+
+  // ---> MODE 1: PUSHER.COM CLOUD (Active - For cPanel / Remote Dev Server)
+  static const WebSocketMode wsMode = WebSocketMode.pusherCloud;
+
+  // ---> MODE 2: LOCAL SOKETI / REVERB (Uncomment for Local Machine Development)
+  // static const WebSocketMode wsMode = WebSocketMode.localServer;
+
+  // ---> MODE 3: HTTP POLLING ONLY (Uncomment to disable WebSockets entirely)
+  // static const WebSocketMode wsMode = WebSocketMode.disabled;
+
+  // ===========================================================================
+  // PUSHER.COM CLOUD SETTINGS
+  // (Used when wsMode == WebSocketMode.pusherCloud)
+  // ===========================================================================
+  static const String pusherKey = 'a5ce3cd6f0f95243808a';
+  static const String pusherCluster = 'ap2';
 
   // ===========================================================================
   // URL DEFINITIONS
@@ -63,37 +96,61 @@ class AppConfig {
   }
 
   // ===========================================================================
-  // WEBSOCKET CONFIGURATION (Pusher / Soketi)
+  // DYNAMIC WEBSOCKET RESOLUTION
+  // Automatically resolves based on selected wsMode above
   // ===========================================================================
 
-  /// Enable or disable WebSocket real-time transport.
-  /// When true, attempts connection to wsHost:wsPort.
-  /// If the WebSocket daemon is not running or unreachable, the app seamlessly
-  /// falls back to automatic HTTP polling without errors or disruption.
-  static const bool wsEnabled = true;
+  /// Whether WebSocket real-time transport is active
+  static bool get wsEnabled => wsMode != WebSocketMode.disabled;
 
-  /// WebSocket host (dynamically matches apiBaseUrl host if remote)
-  static String get wsHost {
-    try {
-      final uri = Uri.parse(apiBaseUrl);
-      if (uri.host.isNotEmpty && uri.host != 'localhost' && uri.host != '127.0.0.1' && uri.host != '10.0.2.2') {
-        return uri.host;
-      }
-    } catch (_) {}
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return '10.0.2.2';
+  /// Pusher / Soketi application key
+  static String get wsKey {
+    switch (wsMode) {
+      case WebSocketMode.pusherCloud:
+        return pusherKey;
+      case WebSocketMode.localServer:
+        return 'capeonn-app-key';
+      case WebSocketMode.disabled:
+        return '';
     }
-    return '127.0.0.1';
   }
 
-  /// WebSocket port (default Soketi/Pusher port is 6001)
-  static const int wsPort = 6001;
+  /// WebSocket host (Pusher cloud endpoint or localhost/emulator)
+  static String get wsHost {
+    switch (wsMode) {
+      case WebSocketMode.pusherCloud:
+        return 'ws-$pusherCluster.pusher.com';
+      case WebSocketMode.localServer:
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+          return '10.0.2.2';
+        }
+        return '127.0.0.1';
+      case WebSocketMode.disabled:
+        return '127.0.0.1';
+    }
+  }
 
-  /// WebSocket scheme ('ws' or 'wss')
-  static const String wsScheme = 'ws';
+  /// WebSocket port (443 for Pusher WSS, 6001 for local Soketi)
+  static int get wsPort {
+    switch (wsMode) {
+      case WebSocketMode.pusherCloud:
+        return 443;
+      case WebSocketMode.localServer:
+      case WebSocketMode.disabled:
+        return 6001;
+    }
+  }
 
-  /// Pusher/Soketi application key
-  static const String wsKey = 'capeonn-app-key';
+  /// WebSocket scheme ('wss' for SSL or 'ws')
+  static String get wsScheme {
+    switch (wsMode) {
+      case WebSocketMode.pusherCloud:
+        return 'wss';
+      case WebSocketMode.localServer:
+      case WebSocketMode.disabled:
+        return 'ws';
+    }
+  }
 
   /// Channel authorization endpoint
   static String get wsAuthUrl => '$apiBaseUrl/broadcasting/auth';
