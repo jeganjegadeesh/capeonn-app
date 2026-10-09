@@ -10,6 +10,7 @@ import '../../application/tasks_providers.dart';
 import 'task_status_dialog.dart';
 import 'task_form_dialog.dart';
 import 'manual_time_dialog.dart';
+import 'task_comments_tab.dart';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import '../../../projects/application/project_files_controller.dart';
@@ -497,6 +498,9 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                   ),
                 ),
 
+                // Phase 7 Workflow Action Bar
+                _buildWorkflowBar(context, detail, currentUser),
+
                 // Description
                 if (task.description != null && task.description!.isNotEmpty)
                   Padding(
@@ -579,10 +583,14 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                       // 2. Time Logs Tab
                       _buildTimeLogsTab(context, detail),
 
-                      // 3. Comments Tab (Phase 6 Placeholder)
-                      _buildCommentsPlaceholderTab(context, detail),
+                      // 3. Comments Tab (Phase 7 Live Discussions)
+                      TaskCommentsTab(
+                        taskId: detail.task.id,
+                        projectId: detail.task.projectId,
+                        currentUser: currentUser,
+                      ),
 
-                      // 4. Attachments Tab (Phase 6 Placeholder)
+                      // 4. Attachments Tab
                       _buildAttachmentsPlaceholderTab(context, detail),
 
                       // 5. Activity History Tab
@@ -890,87 +898,286 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
     );
   }
 
-  Widget _buildCommentsPlaceholderTab(BuildContext context, TaskDetail detail) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.forum_outlined, size: 36, color: AppColors.primary),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Task Comments & Discussions',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Collaborate with team members, mention colleagues (@username), and resolve task blockers directly in context.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  'Scheduled for Phase 6 Collaboration',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Mock comment box preview
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHover,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                      child: Icon(Icons.person, size: 16, color: AppColors.primary),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Write a comment or feedback on this task...',
-                        style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                      ),
-                    ),
-                    Icon(Icons.send_rounded, size: 18, color: AppColors.textMuted),
-                  ],
-                ),
-              ),
-            ],
+  Widget _buildWorkflowBar(BuildContext context, TaskDetail detail, dynamic currentUser) {
+    final task = detail.task;
+    final isAssignee = task.assignedTo?.id != null && task.assignedTo?.id == currentUser?.id;
+    final canManage = (currentUser?.isAdmin == true) ||
+        (currentUser?.isManager == true) ||
+        (detail.project?.teamLeadId != null && detail.project?.teamLeadId == currentUser?.id);
+
+    final List<Widget> buttons = [];
+
+    if (task.status == TaskStatus.inProgress || task.status == TaskStatus.changesRequired) {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => _submitForReview(task),
+          icon: const Icon(Icons.rate_review_outlined, size: 14),
+          label: const Text('Submit for Review'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
+      );
+    }
+
+    if (task.status == TaskStatus.review && canManage) {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: isAssignee ? null : () => _approveTask(task),
+          icon: const Icon(Icons.check_circle_outline, size: 14),
+          label: const Text('Approve Task'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF16A34A),
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+
+      buttons.add(
+        OutlinedButton.icon(
+          onPressed: () => _requestChanges(task),
+          icon: const Icon(Icons.replay, size: 14),
+          label: const Text('Request Changes'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFEA580C),
+            side: const BorderSide(color: Color(0xFFEA580C)),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    if (task.status == TaskStatus.completed && canManage) {
+      buttons.add(
+        OutlinedButton.icon(
+          onPressed: () => _reopenTask(task),
+          icon: const Icon(Icons.refresh, size: 14),
+          label: const Text('Reopen Task'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: BorderSide(color: AppColors.primary),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    if (buttons.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHover,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.alt_route, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Text(
+            'Workflow:',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: buttons,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _submitForReview(TaskItem task) async {
+    final notesController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Submit Task for Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ready to submit "${task.title}" for review?', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Optional notes for reviewer...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Submit', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(taskRepositoryProvider).submitForReview(task.id, notes: notesController.text.trim());
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        ref.invalidate(projectTasksProvider(task.projectId));
+        ref.invalidate(myTasksProvider);
+        if (mounted) AppToast.success(context, 'Task submitted for review.');
+      } catch (e) {
+        if (mounted) AppToast.error(context, e);
+      }
+    }
+  }
+
+  Future<void> _approveTask(TaskItem task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Approve & Complete Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Text('Approve task "${task.title}" and mark it as completed? Any running timers will be stopped.', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A)),
+            child: const Text('Approve & Complete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(taskRepositoryProvider).approveTask(task.id);
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        ref.invalidate(projectTasksProvider(task.projectId));
+        ref.invalidate(myTasksProvider);
+        ref.read(activeTimerProvider.notifier).checkActiveTimer();
+        if (mounted) AppToast.success(context, 'Task approved and completed successfully.');
+      } catch (e) {
+        if (mounted) AppToast.error(context, e);
+      }
+    }
+  }
+
+  Future<void> _requestChanges(TaskItem task) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Request Changes on Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Specify what changes or corrections are needed before approval:', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 4,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Enter change request reason (required)...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+          ElevatedButton(
+            onPressed: () {
+              if (reasonController.text.trim().isEmpty) return;
+              Navigator.of(ctx).pop(true);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEA580C)),
+            child: const Text('Request Changes', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && reasonController.text.trim().isNotEmpty) {
+      try {
+        await ref.read(taskRepositoryProvider).requestChanges(task.id, reason: reasonController.text.trim());
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        ref.invalidate(projectTasksProvider(task.projectId));
+        ref.invalidate(myTasksProvider);
+        if (mounted) AppToast.success(context, 'Changes requested.');
+      } catch (e) {
+        if (mounted) AppToast.error(context, e);
+      }
+    }
+  }
+
+  Future<void> _reopenTask(TaskItem task) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Reopen Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Provide a reason for reopening this completed task:', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 4,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Enter reopening reason (required)...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+          ElevatedButton(
+            onPressed: () {
+              if (reasonController.text.trim().isEmpty) return;
+              Navigator.of(ctx).pop(true);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Reopen Task', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && reasonController.text.trim().isNotEmpty) {
+      try {
+        await ref.read(taskRepositoryProvider).reopenTask(task.id, reason: reasonController.text.trim());
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        ref.invalidate(projectTasksProvider(task.projectId));
+        ref.invalidate(myTasksProvider);
+        if (mounted) AppToast.success(context, 'Task reopened.');
+      } catch (e) {
+        if (mounted) AppToast.error(context, e);
+      }
+    }
   }
 
   Widget _buildAttachmentsPlaceholderTab(BuildContext context, TaskDetail detail) {

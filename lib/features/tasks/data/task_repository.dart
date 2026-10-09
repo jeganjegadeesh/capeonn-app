@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../projects/data/project_models.dart';
+import 'task_comment_models.dart';
 import 'task_models.dart';
 
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -293,6 +295,175 @@ class TaskRepository {
   Future<void> deleteTimeEntry(int entryId) async {
     try {
       await _dio.delete('/time-entries/$entryId');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  // ==========================================
+  // Phase 7: Task Comments & Discussions
+  // ==========================================
+
+  /// GET /tasks/{task}/comments
+  Future<List<TaskCommentModel>> getComments(int taskId) async {
+    try {
+      final res = await _dio.get('/tasks/$taskId/comments');
+      final raw = res.data['data'] as List<dynamic>? ?? [];
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map((c) => TaskCommentModel.fromJson(c))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /tasks/{task}/comments
+  Future<TaskCommentModel> addComment(
+    int taskId, {
+    required String comment,
+    int? parentId,
+    List<int>? mentions,
+    List<dynamic>? attachments,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'comment': comment,
+        'parent_id': ?parentId,
+        if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+        if (attachments != null && attachments.isNotEmpty) 'attachments': attachments,
+      };
+
+      final res = await _dio.post('/tasks/$taskId/comments', data: data);
+      return TaskCommentModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// PUT /tasks/{task}/comments/{comment}
+  Future<TaskCommentModel> updateComment(
+    int taskId,
+    int commentId, {
+    required String comment,
+  }) async {
+    try {
+      final res = await _dio.put(
+        '/tasks/$taskId/comments/$commentId',
+        data: {'comment': comment},
+      );
+      return TaskCommentModel.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// DELETE /tasks/{task}/comments/{comment}
+  Future<void> deleteComment(int taskId, int commentId) async {
+    try {
+      await _dio.delete('/tasks/$taskId/comments/$commentId');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  // ==========================================
+  // Phase 7: Workflow & Approval Actions
+  // ==========================================
+
+  /// POST /tasks/{task}/submit-for-review
+  Future<TaskItem> submitForReview(int taskId, {String? notes}) async {
+    try {
+      final res = await _dio.post(
+        '/tasks/$taskId/submit-for-review',
+        data: notes != null && notes.isNotEmpty ? {'notes': notes} : {},
+      );
+      return TaskItem.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /tasks/{task}/approve
+  Future<TaskItem> approveTask(int taskId) async {
+    try {
+      final res = await _dio.post('/tasks/$taskId/approve');
+      return TaskItem.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /tasks/{task}/request-changes
+  Future<TaskItem> requestChanges(int taskId, {required String reason}) async {
+    try {
+      final res = await _dio.post(
+        '/tasks/$taskId/request-changes',
+        data: {'reason': reason},
+      );
+      return TaskItem.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /tasks/{task}/reopen
+  Future<TaskItem> reopenTask(int taskId, {required String reason}) async {
+    try {
+      final res = await _dio.post(
+        '/tasks/$taskId/reopen',
+        data: {'reason': reason},
+      );
+      return TaskItem.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /tasks/{task}/reassign
+  Future<TaskItem> reassignTask(
+    int taskId, {
+    required int newAssigneeId,
+    String? reason,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/tasks/$taskId/reassign',
+        data: {
+          'assigned_to_id': newAssigneeId,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      return TaskItem.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET /tasks/review-queue
+  Future<List<TaskItem>> getReviewQueue({int? projectId, int? assignedToId, int page = 1}) async {
+    try {
+      final params = <String, dynamic>{'page': page};
+      if (projectId != null) params['project_id'] = projectId;
+      if (assignedToId != null) params['assigned_to_id'] = assignedToId;
+
+      final res = await _dio.get('/tasks/review-queue', queryParameters: params);
+      final raw = res.data['data'] as List<dynamic>? ?? [];
+      return raw.whereType<Map<String, dynamic>>().map((t) => TaskItem.fromJson(t)).toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET /tasks/{task}/activities
+  Future<List<ProjectActivityItem>> getTaskActivities(int taskId, {String? action, int page = 1}) async {
+    try {
+      final params = <String, dynamic>{'page': page};
+      if (action != null && action.isNotEmpty && action != 'all') params['action'] = action;
+
+      final res = await _dio.get('/tasks/$taskId/activities', queryParameters: params);
+      final raw = res.data['data'] as List<dynamic>? ?? [];
+      return raw.whereType<Map<String, dynamic>>().map((a) => ProjectActivityItem.fromJson(a)).toList();
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

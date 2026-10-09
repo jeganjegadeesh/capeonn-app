@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/task_comment_models.dart';
 import '../data/task_models.dart';
 import '../data/task_repository.dart';
+import '../../projects/data/project_models.dart';
 
 // -----------------------------------------------------------------------------
 // Project Tasks Filter & Providers
@@ -307,5 +309,27 @@ final activeTimerProvider =
 final myWorkTodayProvider = FutureProvider<MyWorkTodaySummary>((ref) async {
   final repo = ref.watch(taskRepositoryProvider);
   return repo.getMyWorkToday();
+});
+
+// -----------------------------------------------------------------------------
+// Phase 7: Task Comments, Review Queue & Activities Providers
+// -----------------------------------------------------------------------------
+
+final taskCommentsProvider =
+    FutureProvider.autoDispose.family<List<TaskCommentModel>, int>((ref, taskId) async {
+  final repo = ref.watch(taskRepositoryProvider);
+  return repo.getComments(taskId);
+});
+
+final reviewQueueProvider =
+    FutureProvider.autoDispose<List<TaskItem>>((ref) async {
+  final repo = ref.watch(taskRepositoryProvider);
+  return repo.getReviewQueue();
+});
+
+final taskActivitiesProvider =
+    FutureProvider.autoDispose.family<List<ProjectActivityItem>, int>((ref, taskId) async {
+  final repo = ref.watch(taskRepositoryProvider);
+  return repo.getTaskActivities(taskId);
 });
 

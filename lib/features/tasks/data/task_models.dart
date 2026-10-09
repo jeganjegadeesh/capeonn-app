@@ -224,6 +224,7 @@ class TaskItem {
     this.subtasksCount = 0,
     this.hasActiveTimer = false,
     this.activeTimer,
+    this.projectName,
     this.createdAt,
     this.updatedAt,
   });
@@ -251,8 +252,11 @@ class TaskItem {
   final int subtasksCount;
   final bool hasActiveTimer;
   final ActiveTimerInfo? activeTimer;
+  final String? projectName;
   final String? createdAt;
   final String? updatedAt;
+
+  String? get assignedToName => assignedTo?.name;
 
   bool get isSubtask => parentTaskId != null;
   bool get isCompleted => status == TaskStatus.completed;
@@ -328,6 +332,7 @@ class TaskItem {
       subtasksCount: (json['subtasks_count'] as num?)?.toInt() ?? 0,
       hasActiveTimer: json['has_active_timer'] as bool? ?? false,
       activeTimer: timerJson != null ? ActiveTimerInfo.fromJson(timerJson) : null,
+      projectName: (json['project'] as Map<String, dynamic>?)?['name'] as String? ?? json['project_name'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
     );

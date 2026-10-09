@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../data/task_models.dart';
 import '../application/tasks_providers.dart';
+import '../../auth/application/auth_controller.dart';
 import 'widgets/task_status_dialog.dart';
 import 'widgets/task_detail_dialog.dart';
 import 'widgets/manual_time_dialog.dart';
@@ -18,6 +19,7 @@ class MyTasksPage extends ConsumerStatefulWidget {
 }
 
 class _MyTasksPageState extends ConsumerState<MyTasksPage> {
+  String _currentView = 'my_tasks';
   String _selectedStatus = 'all';
   String _selectedPriority = 'all';
   bool _onlyOverdue = false;
@@ -34,6 +36,11 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(myTasksProvider);
     final activeTimer = ref.watch(activeTimerProvider);
+    final currentUser = ref.watch(authControllerProvider).value;
+    final canReview = currentUser?.isTeamLead == true ||
+        currentUser?.isManager == true ||
+        currentUser?.isAdmin == true;
+    final reviewQueueAsync = canReview ? ref.watch(reviewQueueProvider) : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -50,7 +57,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'My Tasks & Time Tracking',
+                      _currentView == 'review_queue' ? 'Task Review Queue' : 'My Tasks & Time Tracking',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -59,7 +66,9 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Track your assigned work, record active timers, and meet project milestones.',
+                      _currentView == 'review_queue'
+                          ? 'Review work submitted by project members, approve tasks, or request revisions.'
+                          : 'Track your assigned work, record active timers, and meet project milestones.',
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
                   ],
@@ -68,29 +77,80 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                   tooltip: 'Refresh tasks',
                   icon: const Icon(Icons.refresh),
                   onPressed: () {
-                    ref.invalidate(myTasksProvider);
-                    ref.read(activeTimerProvider.notifier).checkActiveTimer();
+                    if (_currentView == 'review_queue') {
+                      ref.invalidate(reviewQueueProvider);
+                    } else {
+                      ref.invalidate(myTasksProvider);
+                      ref.read(activeTimerProvider.notifier).checkActiveTimer();
+                    }
                   },
                 ),
               ],
             ),
 
-            const SizedBox(height: 20),
-
-            // Active Timer Hero Card (if a timer is running)
-            if (activeTimer.isRunning && activeTimer.entry != null) ...[
-              _ActiveTimerHeroCard(entry: activeTimer.entry!, timerState: activeTimer),
-              const SizedBox(height: 20),
+            if (canReview) ...[
+              const SizedBox(height: 16),
+              SegmentedButton<String>(
+                segments: [
+                  const ButtonSegment(
+                    value: 'my_tasks',
+                    label: Text('My Tasks'),
+                    icon: Icon(Icons.assignment_outlined, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: 'review_queue',
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Review Queue'),
+                        reviewQueueAsync!.maybeWhen(
+                          data: (q) => q.isNotEmpty
+                              ? Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD97706),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${q.length}',
+                                    style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                          orElse: () => const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                    icon: const Icon(Icons.rate_review_outlined, size: 16),
+                  ),
+                ],
+                selected: {_currentView},
+                onSelectionChanged: (set) {
+                  setState(() => _currentView = set.first);
+                },
+              ),
             ],
 
-            // KPIs Summary Row
-            tasksAsync.when(
-              data: (tasks) => _buildSummaryKpis(tasks),
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-
             const SizedBox(height: 20),
+
+            if (_currentView == 'review_queue' && canReview) ...[
+              _buildReviewQueue(context, reviewQueueAsync!),
+            ] else ...[
+              // Active Timer Hero Card (if a timer is running)
+              if (activeTimer.isRunning && activeTimer.entry != null) ...[
+                _ActiveTimerHeroCard(entry: activeTimer.entry!, timerState: activeTimer),
+                const SizedBox(height: 20),
+              ],
+
+              // KPIs Summary Row
+              tasksAsync.when(
+                data: (tasks) => _buildSummaryKpis(tasks),
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+
+              const SizedBox(height: 20),
 
             // Filter Bar
             Container(
@@ -277,6 +337,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                 );
               },
             ),
+            ],
           ],
         ),
       ),
@@ -376,6 +437,93 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewQueue(BuildContext context, AsyncValue<List<TaskItem>> queueAsync) {
+    return queueAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, _) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 36, color: AppColors.rose),
+            const SizedBox(height: 8),
+            Text('Failed to load review queue: $err', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(reviewQueueProvider),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+      data: (queue) {
+        if (queue.isEmpty) {
+          return Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 30),
+              padding: const EdgeInsets.all(32),
+              constraints: const BoxConstraints(maxWidth: 480),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+                boxShadow: AppColors.cardShadow,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.emerald.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check_circle_outline, size: 40, color: AppColors.emerald),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Review Queue Clear!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'There are currently no tasks submitted for your review. When assignees complete work and submit tasks for approval, they will appear here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: queue.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final task = queue[index];
+            return _ReviewQueueTaskCard(task: task);
+          },
+        );
+      },
     );
   }
 }
@@ -838,6 +986,197 @@ class _MyTaskCard extends ConsumerWidget {
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewQueueTaskCard extends ConsumerWidget {
+  const _ReviewQueueTaskCard({required this.task});
+
+  final TaskItem task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (_) => TaskDetailDialog(taskId: task.id),
+            ).then((_) {
+              ref.invalidate(reviewQueueProvider);
+              ref.invalidate(myTasksProvider);
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.rate_review_outlined, size: 12, color: Color(0xFFD97706)),
+                          SizedBox(width: 4),
+                          Text(
+                            'Pending Review',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: task.priorityColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        task.priority.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: task.priorityColor,
+                        ),
+                      ),
+                    ),
+                    if (task.projectName != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHover,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          task.projectName!,
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => TaskDetailDialog(taskId: task.id),
+                        ).then((_) {
+                          ref.invalidate(reviewQueueProvider);
+                          ref.invalidate(myTasksProvider);
+                        });
+                      },
+                      icon: const Icon(Icons.rate_review, size: 14),
+                      label: const Text('Review & Decide'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (task.description != null && task.description!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    task.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (task.assignedToName != null) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Assignee: ${task.assignedToName}',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (task.dueDate != null) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 13,
+                            color: task.isOverdue ? AppColors.rose : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${task.dueDate}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: task.isOverdue ? AppColors.rose : AppColors.textSecondary,
+                              fontWeight: task.isOverdue ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.timer_outlined, size: 13, color: AppColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${task.actualHours.toStringAsFixed(1)}h logged',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                        if (task.estimatedHours != null)
+                          Text(
+                            ' / ${task.estimatedHours}h est.',
+                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ],
