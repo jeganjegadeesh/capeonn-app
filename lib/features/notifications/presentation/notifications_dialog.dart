@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../../tasks/presentation/widgets/task_detail_dialog.dart';
 import '../application/notification_controller.dart';
 import '../data/notification_models.dart';
 import '../data/notification_repository.dart';
@@ -79,12 +80,15 @@ class _NotificationsDialogState extends ConsumerState<NotificationsDialog> {
     if (!mounted) return;
     Navigator.of(context).pop();
 
-    if (item.conversationId != null) {
+    if (item.taskId != null) {
+      showDialog(
+        context: context,
+        builder: (_) => TaskDetailDialog(taskId: item.taskId!),
+      );
+    } else if (item.conversationId != null) {
       context.push('/chat/${item.conversationId}');
     } else if (item.projectId != null) {
       context.push('/projects/${item.projectId}');
-    } else if (item.taskId != null) {
-      context.push('/tasks');
     }
   }
 

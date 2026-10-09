@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../data/task_models.dart';
@@ -459,7 +460,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           children: [
             Icon(Icons.error_outline, size: 36, color: AppColors.rose),
             const SizedBox(height: 8),
-            Text('Failed to load review queue: $err', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            Text(ApiException.cleanMessage(err), style: TextStyle(color: AppColors.textSecondary, fontSize: 13), textAlign: TextAlign.center),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => ref.invalidate(reviewQueueProvider),
@@ -1081,6 +1082,28 @@ class _ReviewQueueTaskCard extends ConsumerWidget {
                         ),
                       ),
                     ],
+                    if (task.waitingTimeHuman != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.schedule, size: 12, color: Color(0xFFD97706)),
+                            const SizedBox(width: 4),
+                            Text(
+                              task.waitingTimeHuman!,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     ElevatedButton.icon(
                       onPressed: () {
@@ -1127,6 +1150,19 @@ class _ReviewQueueTaskCard extends ConsumerWidget {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    if (task.submittedByName != null) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.rate_review_outlined, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Submitted by: ${task.submittedByName}',
+                            style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (task.assignedToName != null) ...[
                       Row(
                         mainAxisSize: MainAxisSize.min,

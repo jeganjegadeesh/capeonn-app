@@ -225,6 +225,12 @@ class TaskItem {
     this.hasActiveTimer = false,
     this.activeTimer,
     this.projectName,
+    this.submittedById,
+    this.submittedByName,
+    this.submittedAt,
+    this.waitingTimeHuman,
+    this.reviewerId,
+    this.latestReview,
     this.createdAt,
     this.updatedAt,
   });
@@ -253,6 +259,12 @@ class TaskItem {
   final bool hasActiveTimer;
   final ActiveTimerInfo? activeTimer;
   final String? projectName;
+  final int? submittedById;
+  final String? submittedByName;
+  final String? submittedAt;
+  final String? waitingTimeHuman;
+  final int? reviewerId;
+  final TaskReviewInfo? latestReview;
   final String? createdAt;
   final String? updatedAt;
 
@@ -306,6 +318,8 @@ class TaskItem {
   factory TaskItem.fromJson(Map<String, dynamic> json) {
     final assigned = json['assigned_to'] as Map<String, dynamic>?;
     final created = json['created_by'] as Map<String, dynamic>?;
+    final submitted = json['submitted_by'] as Map<String, dynamic>?;
+    final reviewJson = json['latest_review'] as Map<String, dynamic>?;
     final timerJson = json['active_timer'] as Map<String, dynamic>?;
 
     return TaskItem(
@@ -333,8 +347,48 @@ class TaskItem {
       hasActiveTimer: json['has_active_timer'] as bool? ?? false,
       activeTimer: timerJson != null ? ActiveTimerInfo.fromJson(timerJson) : null,
       projectName: (json['project'] as Map<String, dynamic>?)?['name'] as String? ?? json['project_name'] as String?,
+      submittedById: (json['submitted_by_id'] as num?)?.toInt(),
+      submittedByName: submitted != null ? (submitted['name'] as String?) : null,
+      submittedAt: json['submitted_at'] as String?,
+      waitingTimeHuman: json['waiting_time_human'] as String?,
+      reviewerId: (json['reviewer_id'] as num?)?.toInt(),
+      latestReview: reviewJson != null ? TaskReviewInfo.fromJson(reviewJson) : null,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
+    );
+  }
+}
+
+/// Review outcome and round information for review workflow
+class TaskReviewInfo {
+  const TaskReviewInfo({
+    required this.id,
+    required this.roundNumber,
+    this.outcome,
+    this.feedback,
+    this.reviewerId,
+    this.reviewerName,
+    this.decidedAt,
+  });
+
+  final int id;
+  final int roundNumber;
+  final String? outcome;
+  final String? feedback;
+  final int? reviewerId;
+  final String? reviewerName;
+  final String? decidedAt;
+
+  factory TaskReviewInfo.fromJson(Map<String, dynamic> json) {
+    final reviewer = json['reviewer'] as Map<String, dynamic>?;
+    return TaskReviewInfo(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      roundNumber: (json['round_number'] as num?)?.toInt() ?? 1,
+      outcome: json['outcome'] as String?,
+      feedback: json['feedback'] as String?,
+      reviewerId: (json['reviewer_id'] as num?)?.toInt(),
+      reviewerName: reviewer != null ? reviewer['name'] as String? : null,
+      decidedAt: json['decided_at'] as String?,
     );
   }
 }

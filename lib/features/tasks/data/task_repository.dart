@@ -123,10 +123,11 @@ class TaskRepository {
   }
 
   /// POST /tasks/{task}/assign
-  Future<TaskItem> assignTask(int taskId, int? assignedToId) async {
+  Future<TaskItem> assignTask(int taskId, int? assignedToId, {String? reason}) async {
     try {
       final res = await _dio.post('/tasks/$taskId/assign', data: {
         'assigned_to_id': assignedToId,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       });
       return TaskItem.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
     } on DioException catch (e) {
@@ -318,6 +319,27 @@ class TaskRepository {
     }
   }
 
+  /// POST /uploads (upload attachment file for task comment)
+  Future<Map<String, dynamic>> uploadAttachment({
+    required List<int> bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: fileName,
+        ),
+      });
+
+      final res = await _dio.post('/uploads', data: formData);
+      return Map<String, dynamic>.from(res.data['data'] as Map);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// POST /tasks/{task}/comments
   Future<TaskCommentModel> addComment(
     int taskId, {
@@ -325,6 +347,7 @@ class TaskRepository {
     int? parentId,
     List<int>? mentions,
     List<dynamic>? attachments,
+    List<int>? uploadIds,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -332,6 +355,7 @@ class TaskRepository {
         'parent_id': ?parentId,
         if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
         if (attachments != null && attachments.isNotEmpty) 'attachments': attachments,
+        if (uploadIds != null && uploadIds.isNotEmpty) 'upload_ids': uploadIds,
       };
 
       final res = await _dio.post('/tasks/$taskId/comments', data: data);
@@ -362,6 +386,20 @@ class TaskRepository {
   Future<void> deleteComment(int taskId, int commentId) async {
     try {
       await _dio.delete('/tasks/$taskId/comments/$commentId');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET /tasks/{task}/comments/{comment}/history
+  Future<List<TaskCommentEditModel>> getCommentHistory(int taskId, int commentId) async {
+    try {
+      final res = await _dio.get('/tasks/$taskId/comments/$commentId/history');
+      final raw = res.data['data'] as List<dynamic>? ?? [];
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map((c) => TaskCommentEditModel.fromJson(c))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

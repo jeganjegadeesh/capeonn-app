@@ -17,6 +17,8 @@ import '../../../projects/application/project_files_controller.dart';
 import '../../../projects/data/project_files_repository.dart';
 import '../../../chat/data/chat_repository.dart';
 import '../../../../core/services/file_download_service.dart';
+import '../../../projects/application/projects_controller.dart';
+import '../../../projects/data/project_models.dart';
 
 
 class TaskDetailDialog extends ConsumerStatefulWidget {
@@ -236,27 +238,43 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                       ),
 
                       // Assignee Pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
-                            const SizedBox(width: 6),
-                            Text(
-                              task.assignedTo?.name ?? 'Unassigned',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: task.assignedTo != null ? AppColors.textPrimary : AppColors.textMuted,
+                      InkWell(
+                        onTap: ((currentUser?.isAdmin == true) ||
+                                (currentUser?.isManager == true) ||
+                                (detail.project?.teamLeadId != null && detail.project?.teamLeadId == currentUser?.id)) &&
+                                task.status != TaskStatus.completed
+                            ? () => _reassignTask(task, detail)
+                            : null,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                              const SizedBox(width: 6),
+                              Text(
+                                task.assignedTo?.name ?? 'Unassigned',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: task.assignedTo != null ? AppColors.textPrimary : AppColors.textMuted,
+                                ),
                               ),
-                            ),
-                          ],
+                              if (((currentUser?.isAdmin == true) ||
+                                      (currentUser?.isManager == true) ||
+                                      (detail.project?.teamLeadId != null && detail.project?.teamLeadId == currentUser?.id)) &&
+                                  task.status != TaskStatus.completed) ...[
+                                const SizedBox(width: 4),
+                                Icon(Icons.swap_horiz, size: 13, color: AppColors.textMuted),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
 
@@ -901,6 +919,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
   Widget _buildWorkflowBar(BuildContext context, TaskDetail detail, dynamic currentUser) {
     final task = detail.task;
     final isAssignee = task.assignedTo?.id != null && task.assignedTo?.id == currentUser?.id;
+    final isSubmitter = task.submittedById != null && task.submittedById == currentUser?.id;
+    final cannotApprove = isAssignee || isSubmitter;
     final canManage = (currentUser?.isAdmin == true) ||
         (currentUser?.isManager == true) ||
         (detail.project?.teamLeadId != null && detail.project?.teamLeadId == currentUser?.id);
@@ -924,15 +944,22 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
 
     if (task.status == TaskStatus.review && canManage) {
       buttons.add(
-        ElevatedButton.icon(
-          onPressed: isAssignee ? null : () => _approveTask(task),
-          icon: const Icon(Icons.check_circle_outline, size: 14),
-          label: const Text('Approve Task'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF16A34A),
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        Tooltip(
+          message: cannotApprove
+              ? (isSubmitter
+                  ? 'Submitters cannot approve their own tasks'
+                  : 'Assignees cannot approve their own tasks')
+              : 'Approve and mark task as completed',
+          child: ElevatedButton.icon(
+            onPressed: cannotApprove ? null : () => _approveTask(task),
+            icon: const Icon(Icons.check_circle_outline, size: 14),
+            label: const Text('Approve Task'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
           ),
         ),
       );
@@ -960,6 +987,21 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: BorderSide(color: AppColors.primary),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    if (canManage && task.status != TaskStatus.completed) {
+      buttons.add(
+        OutlinedButton.icon(
+          onPressed: () => _reassignTask(task, detail),
+          icon: const Icon(Icons.person_add_alt_1_outlined, size: 14),
+          label: const Text('Reassign'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF0284C7),
+            side: const BorderSide(color: Color(0xFF0284C7)),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
@@ -1080,38 +1122,41 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
     final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Request Changes on Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Specify what changes or corrections are needed before approval:', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              maxLines: 4,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Enter change request reason (required)...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isValid = reasonController.text.trim().isNotEmpty;
+          return AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: const Text('Request Changes on Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Specify what changes or corrections are needed before approval:', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 4,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Enter change request reason (required)...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
-          ElevatedButton(
-            onPressed: () {
-              if (reasonController.text.trim().isEmpty) return;
-              Navigator.of(ctx).pop(true);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEA580C)),
-            child: const Text('Request Changes', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+              ElevatedButton(
+                onPressed: isValid ? () => Navigator.of(ctx).pop(true) : null,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEA580C)),
+                child: const Text('Request Changes', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -1132,38 +1177,41 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
     final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Reopen Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Provide a reason for reopening this completed task:', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              maxLines: 4,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Enter reopening reason (required)...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isValid = reasonController.text.trim().isNotEmpty;
+          return AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: const Text('Reopen Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Provide a reason for reopening this completed task:', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 4,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Enter reopening reason (required)...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
-          ElevatedButton(
-            onPressed: () {
-              if (reasonController.text.trim().isEmpty) return;
-              Navigator.of(ctx).pop(true);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Reopen Task', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+              ElevatedButton(
+                onPressed: isValid ? () => Navigator.of(ctx).pop(true) : null,
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: const Text('Reopen Task', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -1179,6 +1227,127 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
       }
     }
   }
+
+  Future<void> _reassignTask(TaskItem task, TaskDetail detail) async {
+    List<ProjectMemberItem> members = [];
+    try {
+      final projectDetail = await ref.read(projectDetailProvider(task.projectId).future);
+      members = projectDetail.members;
+    } catch (_) {
+      // Fallback
+    }
+
+    if (!mounted) return;
+
+    if (members.isEmpty) {
+      AppToast.info(context, 'No team members found in this project to assign.');
+      return;
+    }
+
+    int? selectedUserId = task.assignedTo?.id;
+    final reasonController = TextEditingController();
+    final hasStarted = task.startedAt != null ||
+        (task.status != TaskStatus.backlog && task.status != TaskStatus.assigned);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isSame = selectedUserId == task.assignedTo?.id;
+            final needsReason = hasStarted;
+            final canSubmit = selectedUserId != null &&
+                !isSame &&
+                (!needsReason || reasonController.text.trim().isNotEmpty);
+
+            return AlertDialog(
+              backgroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              title: const Text('Reassign Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reassigning "${task.title}" to a different team member:',
+                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedUserId,
+                      decoration: InputDecoration(
+                        labelText: 'Select New Assignee',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      items: members.map((m) {
+                        return DropdownMenuItem<int>(
+                          value: m.userId,
+                          child: Text('${m.name} (${m.roleName ?? m.projectRole})'),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedUserId = val;
+                        });
+                      },
+                    ),
+                    if (hasStarted) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        'This task has already started. A hand-off reason is required:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.amber),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: reasonController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Enter reason for reassignment (required)...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+                ElevatedButton(
+                  onPressed: canSubmit ? () => Navigator.of(ctx).pop(true) : null,
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
+                  child: const Text('Confirm Reassign', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed == true && selectedUserId != null) {
+      try {
+        await ref.read(taskRepositoryProvider).reassignTask(
+          task.id,
+          newAssigneeId: selectedUserId!,
+          reason: reasonController.text.trim().isNotEmpty ? reasonController.text.trim() : null,
+        );
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        ref.invalidate(projectTasksProvider(task.projectId));
+        ref.invalidate(myTasksProvider);
+        ref.read(activeTimerProvider.notifier).checkActiveTimer();
+        if (mounted) AppToast.success(context, 'Task reassigned successfully.');
+      } catch (e) {
+        if (mounted) AppToast.error(context, e);
+      }
+    }
+  }
+
 
   Widget _buildAttachmentsPlaceholderTab(BuildContext context, TaskDetail detail) {
     final filesAsync = ref.watch(projectFilesProvider(detail.task.projectId));

@@ -21,10 +21,10 @@ class AppConfig {
   // ===========================================================================
 
   // ---> DEV URL (Active)
-  static String get apiBaseUrl => devUrl;
+  // static String get apiBaseUrl => devUrl;
 
   // ---> LOCAL URL (Uncomment line below and comment out DEV line above to use local)
-  // static String get apiBaseUrl => localUrl;
+  static String get apiBaseUrl => localUrl;
 
   // ===========================================================================
   // WEBSOCKET MODE CONFIGURATION
