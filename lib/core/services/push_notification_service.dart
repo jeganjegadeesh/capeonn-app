@@ -55,7 +55,9 @@ class PushNotificationService {
     }
 
     try {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      if (!kIsWeb) {
+        FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      }
 
       // 1. Request permissions on iOS and Android 13+
       final settings = await FirebaseMessaging.instance.requestPermission(
