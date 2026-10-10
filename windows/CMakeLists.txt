@@ -53,6 +53,34 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 add_subdirectory("runner")
 
 
+# Auto-patch Firebase C++ SDK CMake requirement for compatibility with Visual Studio 2019 (CMake 3.20)
+set(FIREBASE_SDK_VER "13.12.0")
+set(FIREBASE_EXTRACTED_DIR "${CMAKE_BINARY_DIR}/extracted")
+set(FIREBASE_SDK_CMAKELISTS "${FIREBASE_EXTRACTED_DIR}/firebase_cpp_sdk_windows/CMakeLists.txt")
+set(FIREBASE_SDK_ZIP "${CMAKE_BINARY_DIR}/firebase_cpp_sdk_windows_${FIREBASE_SDK_VER}.zip")
+
+if(NOT EXISTS "${FIREBASE_SDK_CMAKELISTS}")
+  set(FIREBASE_DOWNLOAD_URL "https://dl.google.com/firebase/sdk/cpp/firebase_cpp_sdk_windows_${FIREBASE_SDK_VER}.zip")
+  if(NOT EXISTS "${FIREBASE_SDK_ZIP}")
+    message(STATUS "Pre-downloading Firebase C++ SDK for CMake 3.20 compatibility...")
+    file(DOWNLOAD "${FIREBASE_DOWNLOAD_URL}" "${FIREBASE_SDK_ZIP}" SHOW_PROGRESS)
+  endif()
+  if(EXISTS "${FIREBASE_SDK_ZIP}" AND NOT EXISTS "${FIREBASE_EXTRACTED_DIR}")
+    message(STATUS "Pre-extracting Firebase C++ SDK...")
+    file(MAKE_DIRECTORY "${FIREBASE_EXTRACTED_DIR}")
+    file(ARCHIVE_EXTRACT INPUT "${FIREBASE_SDK_ZIP}" DESTINATION "${FIREBASE_EXTRACTED_DIR}")
+  endif()
+endif()
+
+if(EXISTS "${FIREBASE_SDK_CMAKELISTS}")
+  file(READ "${FIREBASE_SDK_CMAKELISTS}" _firebase_cmake_content)
+  if("${_firebase_cmake_content}" MATCHES "cmake_minimum_required\\(VERSION 3\\.22\\)")
+    message(STATUS "Patching Firebase C++ SDK cmake_minimum_required from 3.22 to 3.20 for MSVC 2019...")
+    string(REPLACE "cmake_minimum_required(VERSION 3.22)" "cmake_minimum_required(VERSION 3.20)" _firebase_cmake_content "${_firebase_cmake_content}")
+    file(WRITE "${FIREBASE_SDK_CMAKELISTS}" "${_firebase_cmake_content}")
+  endif()
+endif()
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
@@ -64,10 +92,7 @@ include(flutter/generated_plugins.cmake)
 # so that building and running from within Visual Studio will work.
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 # Make the "install" step default, as it's required to run.
-set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
-endif()
+set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
