@@ -1,24 +1,101 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_client.dart';
+import '../../../core/services/push_notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/auth_user.dart';
 import '../../chat/application/presence_controller.dart';
+import '../../chat/data/chat_websocket_service.dart';
 import '../../notifications/application/notification_controller.dart';
 import '../../notifications/presentation/notifications_dialog.dart';
 import '../../tasks/presentation/widgets/active_timer_banner.dart';
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  StreamSubscription<Map<String, dynamic>>? _notificationSub;
+  bool _setupDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initNotifications();
+    });
+  }
+
+  Future<void> _initNotifications() async {
+    if (_setupDone) return;
+    _setupDone = true;
+
+    // 1. Initialize FCM Push Notifications
+    ref.read(pushNotificationServiceProvider).initialize();
+
+    // 2. Subscribe to WebSocket User Notifications channel
+    final user = ref.read(authControllerProvider).value;
+    if (user != null) {
+      final token = await ref.read(tokenStorageProvider).read();
+      if (token != null) {
+        ref.read(chatWebSocketServiceProvider).subscribeUserNotifications(
+              user.id,
+              authToken: token,
+            );
+      }
+    }
+
+    // 3. Listen to incoming real-time notifications
+    _notificationSub = ref
+        .read(chatWebSocketServiceProvider)
+        .notificationStream
+        .listen((data) {
+      ref.invalidate(notificationUnreadCountProvider);
+      ref.invalidate(notificationsListProvider(false));
+
+      if (mounted) {
+        final notif = data['notification'] is Map
+            ? Map<String, dynamic>.from(data['notification'] as Map)
+            : <String, dynamic>{};
+        final title = notif['title'] as String? ?? 'New Notification';
+        final message = notif['message'] as String? ?? notif['body'] as String? ?? '';
+        final notifData = notif['data'] is Map
+            ? Map<String, dynamic>.from(notif['data'] as Map)
+            : <String, dynamic>{};
+
+        if (message.isNotEmpty) {
+          AppToast.showNotificationToast(
+            context,
+            title: title,
+            message: message,
+            onTap: () {
+              ref.read(pushNotificationServiceProvider).handleNotificationTap(notifData);
+            },
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).value;
     final themeMode = ref.watch(themeModeProvider);
     if (user == null) {
@@ -45,7 +122,7 @@ class AppShell extends ConsumerWidget {
             Expanded(
               child: KeyedSubtree(
                 key: ValueKey('page_${location}_${themeMode.name}'),
-                child: child,
+                child: widget.child,
               ),
             ),
           ],
@@ -133,7 +210,7 @@ class AppShell extends ConsumerWidget {
           Expanded(
             child: KeyedSubtree(
               key: ValueKey('page_${location}_${themeMode.name}'),
-              child: child,
+              child: widget.child,
             ),
           ),
         ],

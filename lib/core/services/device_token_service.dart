@@ -17,21 +17,27 @@ class DeviceTokenService {
   final TokenStorage _tokenStorage;
   static const _deviceTokenKey = 'capeonn_device_token';
 
-  Future<void> registerDeviceToken({String? customToken}) async {
+  Future<void> registerDeviceToken({String? customToken, String? deviceName}) async {
     try {
       final platform = kIsWeb
           ? 'web'
           : Platform.isIOS
               ? 'ios'
-              : 'android';
-      
+              : Platform.isWindows
+                  ? 'windows'
+                  : 'android';
+
       final existingToken = await _tokenStorage.readKey(_deviceTokenKey);
       final token = customToken ?? existingToken ?? 'device_${platform}_${DateTime.now().millisecondsSinceEpoch}';
 
-      await _dio.post('/device-tokens', data: {
+      final payload = <String, dynamic>{
         'token': token,
         'platform': platform,
-      });
+      };
+      if (deviceName != null) {
+        payload['device_name'] = deviceName;
+      }
+      await _dio.post('/device-tokens', data: payload);
 
       await _tokenStorage.writeKey(_deviceTokenKey, token);
     } catch (_) {

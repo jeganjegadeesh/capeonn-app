@@ -68,4 +68,65 @@ class NotificationRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<void> registerDeviceToken({
+    required String token,
+    required String platform,
+    String? deviceName,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'token': token,
+        'platform': platform,
+      };
+      if (deviceName != null) {
+        payload['device_name'] = deviceName;
+      }
+      await _dio.post('/device-tokens', data: payload);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    try {
+      await _dio.delete('/device-tokens', data: {'token': token});
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<NotificationPreferencesModel> getPreferences() async {
+    try {
+      final res = await _dio.get('/notifications/preferences');
+      final data = res.data['data'] as Map? ?? {};
+      return NotificationPreferencesModel.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<NotificationPreferencesModel> updatePreferences(
+    NotificationPreferencesModel preferences,
+  ) async {
+    try {
+      final res = await _dio.put(
+        '/notifications/preferences',
+        data: preferences.toJson(),
+      );
+      final data = res.data['data'] as Map? ?? {};
+      return NotificationPreferencesModel.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> sendTestPush() async {
+    try {
+      final res = await _dio.post('/notifications/test-push');
+      return Map<String, dynamic>.from(res.data as Map);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

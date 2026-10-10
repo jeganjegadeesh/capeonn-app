@@ -151,11 +151,15 @@ class ChatWebSocketService {
       StreamController<ChatMessageModel>.broadcast();
   final StreamController<ChatMessagePinnedData> _messagePinnedController =
       StreamController<ChatMessagePinnedData>.broadcast();
+  final StreamController<Map<String, dynamic>> _notificationController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   final Map<int, _ConversationSubscriptions> _activeChannels = {};
   final Map<int, _ConversationSubscriptions> _companyChannels = {};
+  final Map<int, _ConversationSubscriptions> _userChannels = {};
   final Map<int, String> _pendingConversationTokens = {};
   final Map<int, String> _pendingCompanyTokens = {};
+  final Map<int, String> _pendingUserTokens = {};
 
   DateTime? _lastErrorLogTime;
   StreamSubscription<dynamic>? _lifecycleSub;
@@ -173,6 +177,8 @@ class ChatWebSocketService {
       _messageUpdatedController.stream;
   Stream<ChatMessagePinnedData> get messagePinnedStream =>
       _messagePinnedController.stream;
+  Stream<Map<String, dynamic>> get notificationStream =>
+      _notificationController.stream;
 
   void _setStatus(WebSocketStatus newStatus) {
     if (_status != newStatus) {
@@ -483,6 +489,82 @@ class ChatWebSocketService {
     for (final entry in _pendingCompanyTokens.entries) {
       _doSubscribeCompany(entry.key, authToken: entry.value);
     }
+    for (final entry in _pendingUserTokens.entries) {
+      _doSubscribeUserNotifications(entry.key, authToken: entry.value);
+    }
+  }
+
+  /// Subscribe to private user channel for real-time notification alerts
+  void subscribeUserNotifications(
+    int userId, {
+    required String authToken,
+    String? authEndpoint,
+  }) {
+    _pendingUserTokens[userId] = authToken;
+    if (_client == null || _status != WebSocketStatus.connected) {
+      return;
+    }
+    _doSubscribeUserNotifications(userId, authToken: authToken, authEndpoint: authEndpoint);
+  }
+
+  void _doSubscribeUserNotifications(
+    int userId, {
+    required String authToken,
+    String? authEndpoint,
+  }) {
+    if (_client == null || _userChannels.containsKey(userId)) {
+      return;
+    }
+
+    try {
+      final endpoint = authEndpoint ?? AppConfig.wsAuthUrl;
+      final channelName = 'private-user.$userId';
+
+      final channel = _client!.privateChannel(
+        channelName,
+        authorizationDelegate:
+            EndpointAuthorizableChannelTokenAuthorizationDelegate.forPrivateChannel(
+          authorizationEndpoint: Uri.parse(endpoint),
+          headers: {
+            'Authorization': 'Bearer $authToken',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      final subs = <StreamSubscription<dynamic>>[];
+
+      final notifBind = channel.bind('notification.created');
+      final notifSub = notifBind.listen((ChannelReadEvent event) {
+        try {
+          final map = _decodeData(event.data);
+          if (map != null) {
+            _notificationController.add(map);
+          }
+        } catch (e) {
+          debugPrint('Error parsing notification.created: $e');
+        }
+      });
+      subs.add(notifSub);
+
+      channel.subscribeIfNotUnsubscribed();
+
+      _userChannels[userId] = _ConversationSubscriptions(
+        channel: channel,
+        subscriptions: subs,
+      );
+    } catch (e) {
+      debugPrint('Failed to subscribe to user notification channel $userId: $e');
+    }
+  }
+
+  /// Unsubscribe from user notification channel
+  Future<void> unsubscribeUserNotifications(int userId) async {
+    _pendingUserTokens.remove(userId);
+    final entry = _userChannels.remove(userId);
+    if (entry != null) {
+      await entry.cancelAll();
+    }
   }
 
   /// Unsubscribe from company channel
@@ -505,6 +587,11 @@ class ChatWebSocketService {
       await entry.cancelAll();
     }
     _companyChannels.clear();
+
+    for (final entry in _userChannels.values) {
+      await entry.cancelAll();
+    }
+    _userChannels.clear();
 
     await _lifecycleSub?.cancel();
     _lifecycleSub = null;
@@ -547,6 +634,7 @@ class ChatWebSocketService {
     await _messageDeletedController.close();
     await _messageUpdatedController.close();
     await _messagePinnedController.close();
+    await _notificationController.close();
   }
 }
 

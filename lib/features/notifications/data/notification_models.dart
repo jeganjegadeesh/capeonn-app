@@ -1,3 +1,11 @@
+enum NotificationCategory {
+  all,
+  unread,
+  tasks,
+  projects,
+  chat,
+}
+
 class AppNotificationItem {
   const AppNotificationItem({
     required this.id,
@@ -18,6 +26,13 @@ class AppNotificationItem {
   final DateTime? createdAt;
 
   bool get isRead => readAt != null;
+
+  NotificationCategory get category {
+    if (type.startsWith('task_')) return NotificationCategory.tasks;
+    if (type.startsWith('project_')) return NotificationCategory.projects;
+    if (type.startsWith('chat_')) return NotificationCategory.chat;
+    return NotificationCategory.all;
+  }
 
   int? get conversationId {
     final conv = data['conversation_id'];
@@ -80,6 +95,75 @@ class PaginatedNotifications {
       total: (meta['total'] as num?)?.toInt() ?? 0,
       currentPage: (meta['current_page'] as num?)?.toInt() ?? 1,
       lastPage: (meta['last_page'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
+
+class NotificationPreferencesModel {
+  const NotificationPreferencesModel({
+    required this.pushEnabled,
+    required this.emailEnabled,
+    required this.taskAlerts,
+    required this.deadlineAlerts,
+    required this.chatAlerts,
+    required this.projectAlerts,
+  });
+
+  final bool pushEnabled;
+  final bool emailEnabled;
+  final bool taskAlerts;
+  final bool deadlineAlerts;
+  final bool chatAlerts;
+  final bool projectAlerts;
+
+  factory NotificationPreferencesModel.defaults() {
+    return const NotificationPreferencesModel(
+      pushEnabled: true,
+      emailEnabled: true,
+      taskAlerts: true,
+      deadlineAlerts: true,
+      chatAlerts: true,
+      projectAlerts: true,
+    );
+  }
+
+  factory NotificationPreferencesModel.fromJson(Map<String, dynamic> json) {
+    return NotificationPreferencesModel(
+      pushEnabled: json['push_enabled'] as bool? ?? true,
+      emailEnabled: json['email_enabled'] as bool? ?? true,
+      taskAlerts: json['task_alerts'] as bool? ?? true,
+      deadlineAlerts: json['deadline_alerts'] as bool? ?? true,
+      chatAlerts: json['chat_alerts'] as bool? ?? true,
+      projectAlerts: json['project_alerts'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'push_enabled': pushEnabled,
+      'email_enabled': emailEnabled,
+      'task_alerts': taskAlerts,
+      'deadline_alerts': deadlineAlerts,
+      'chat_alerts': chatAlerts,
+      'project_alerts': projectAlerts,
+    };
+  }
+
+  NotificationPreferencesModel copyWith({
+    bool? pushEnabled,
+    bool? emailEnabled,
+    bool? taskAlerts,
+    bool? deadlineAlerts,
+    bool? chatAlerts,
+    bool? projectAlerts,
+  }) {
+    return NotificationPreferencesModel(
+      pushEnabled: pushEnabled ?? this.pushEnabled,
+      emailEnabled: emailEnabled ?? this.emailEnabled,
+      taskAlerts: taskAlerts ?? this.taskAlerts,
+      deadlineAlerts: deadlineAlerts ?? this.deadlineAlerts,
+      chatAlerts: chatAlerts ?? this.chatAlerts,
+      projectAlerts: projectAlerts ?? this.projectAlerts,
     );
   }
 }
