@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../network/api_client.dart';
 import '../router/app_router.dart';
 import '../widgets/app_toast.dart';
 import '../../features/notifications/data/notification_repository.dart';
@@ -50,6 +51,9 @@ class PushNotificationService {
     if (!isSupportedPlatform) {
       if (kDebugMode) {
         print('FCM Push notifications not natively supported on this platform: $defaultTargetPlatform. Falling back to real-time WebSockets.');
+      }
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+        await _registerWindowsDeviceToken();
       }
       return;
     }
@@ -134,6 +138,33 @@ class PushNotificationService {
     } catch (e) {
       if (kDebugMode) {
         print('Failed to register FCM device token: $e');
+      }
+    }
+  }
+
+  Future<void> _registerWindowsDeviceToken() async {
+    try {
+      final tokenStorage = _ref.read(tokenStorageProvider);
+      const storageKey = 'capeonn_windows_device_token';
+      var winToken = await tokenStorage.readKey(storageKey);
+      if (winToken == null || winToken.isEmpty) {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final randomPart = (timestamp % 1000000).toString().padLeft(6, '0');
+        winToken = 'win_device_${timestamp}_$randomPart';
+        await tokenStorage.writeKey(storageKey, winToken);
+      }
+
+      await _ref.read(notificationRepositoryProvider).registerDeviceToken(
+        token: winToken,
+        platform: 'windows',
+        deviceName: 'Windows Desktop PC',
+      );
+      if (kDebugMode) {
+        print('Windows desktop device registered with token: $winToken');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to register Windows device token: $e');
       }
     }
   }
