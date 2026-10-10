@@ -27,7 +27,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   StreamSubscription<Map<String, dynamic>>? _notificationSub;
-  bool _setupDone = false;
+  int? _subscribedUserId;
 
   @override
   void initState() {
@@ -38,41 +38,34 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Future<void> _initNotifications() async {
-    if (_setupDone) return;
-    _setupDone = true;
-
     // 1. Initialize FCM Push Notifications
     ref.read(pushNotificationServiceProvider).initialize();
 
     // 2. Subscribe to WebSocket User Notifications channel
     final user = ref.read(authControllerProvider).value;
     if (user != null) {
-      final token = await ref.read(tokenStorageProvider).read();
-      if (token != null) {
-        ref.read(chatWebSocketServiceProvider).subscribeUserNotifications(
-              user.id,
-              authToken: token,
-            );
-      }
+      _subscribeToWebSocket(user.id);
     }
 
     // 3. Listen to incoming real-time notifications
+    _notificationSub?.cancel();
     _notificationSub = ref
         .read(chatWebSocketServiceProvider)
         .notificationStream
         .listen((data) {
+      debugPrint('[AppShell] Notification event received via WebSocket: $data');
       ref.invalidate(notificationUnreadCountProvider);
       ref.invalidate(notificationsListProvider(false));
 
       if (mounted) {
         final notif = data['notification'] is Map
             ? Map<String, dynamic>.from(data['notification'] as Map)
-            : <String, dynamic>{};
-        final title = notif['title'] as String? ?? 'New Notification';
-        final message = notif['message'] as String? ?? notif['body'] as String? ?? '';
+            : data;
+        final title = notif['title'] as String? ?? data['title'] as String? ?? 'New Notification';
+        final message = notif['message'] as String? ?? notif['body'] as String? ?? data['message'] as String? ?? '';
         final notifData = notif['data'] is Map
             ? Map<String, dynamic>.from(notif['data'] as Map)
-            : <String, dynamic>{};
+            : (data['data'] is Map ? Map<String, dynamic>.from(data['data'] as Map) : <String, dynamic>{});
 
         if (message.isNotEmpty) {
           AppToast.showNotificationToast(
@@ -88,6 +81,22 @@ class _AppShellState extends ConsumerState<AppShell> {
     });
   }
 
+  Future<void> _subscribeToWebSocket(int userId) async {
+    if (_subscribedUserId == userId) return;
+    _subscribedUserId = userId;
+
+    final token = await ref.read(tokenStorageProvider).read();
+    if (token != null && token.isNotEmpty) {
+      final ws = ref.read(chatWebSocketServiceProvider);
+      debugPrint('[AppShell] Connecting WebSocket and subscribing notifications for user $userId');
+      await ws.connect(authToken: token);
+      ws.subscribeUserNotifications(
+            userId,
+            authToken: token,
+          );
+    }
+  }
+
   @override
   void dispose() {
     _notificationSub?.cancel();
@@ -96,10 +105,23 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authControllerProvider, (prev, next) {
+      final nextUser = next.value;
+      if (nextUser != null && nextUser.id != _subscribedUserId) {
+        _subscribeToWebSocket(nextUser.id);
+      }
+    });
+
     final user = ref.watch(authControllerProvider).value;
     final themeMode = ref.watch(themeModeProvider);
     if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_subscribedUserId != user.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _subscribeToWebSocket(user.id);
+      });
     }
 
     final location = GoRouterState.of(context).matchedLocation;

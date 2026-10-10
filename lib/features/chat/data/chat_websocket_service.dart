@@ -502,6 +502,9 @@ class ChatWebSocketService {
   }) {
     _pendingUserTokens[userId] = authToken;
     if (_client == null || _status != WebSocketStatus.connected) {
+      if (_status == WebSocketStatus.disconnected) {
+        connect(authToken: authToken);
+      }
       return;
     }
     _doSubscribeUserNotifications(userId, authToken: authToken, authEndpoint: authEndpoint);
@@ -519,6 +522,7 @@ class ChatWebSocketService {
     try {
       final endpoint = authEndpoint ?? AppConfig.wsAuthUrl;
       final channelName = 'private-user.$userId';
+      debugPrint('[WebSocket] Subscribing to user notification channel: $channelName via $endpoint');
 
       final channel = _client!.privateChannel(
         channelName,
@@ -537,6 +541,7 @@ class ChatWebSocketService {
       final notifBind = channel.bind('notification.created');
       final notifSub = notifBind.listen((ChannelReadEvent event) {
         try {
+          debugPrint('[WebSocket] Received notification.created event: ${event.data}');
           final map = _decodeData(event.data);
           if (map != null) {
             _notificationController.add(map);
@@ -546,6 +551,20 @@ class ChatWebSocketService {
         }
       });
       subs.add(notifSub);
+
+      final notifDotBind = channel.bind('.notification.created');
+      final notifDotSub = notifDotBind.listen((ChannelReadEvent event) {
+        try {
+          debugPrint('[WebSocket] Received .notification.created event: ${event.data}');
+          final map = _decodeData(event.data);
+          if (map != null) {
+            _notificationController.add(map);
+          }
+        } catch (e) {
+          debugPrint('Error parsing .notification.created: $e');
+        }
+      });
+      subs.add(notifDotSub);
 
       channel.subscribeIfNotUnsubscribed();
 
