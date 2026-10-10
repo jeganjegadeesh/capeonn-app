@@ -128,6 +128,7 @@ class PushNotificationService {
                   ? 'ios'
                   : 'windows';
 
+      await _ref.read(tokenStorageProvider).writeKey('capeonn_device_token', token);
       await _ref.read(notificationRepositoryProvider).registerDeviceToken(
         token: token,
         platform: platformStr,
@@ -145,7 +146,7 @@ class PushNotificationService {
   Future<void> _registerWindowsDeviceToken() async {
     try {
       final tokenStorage = _ref.read(tokenStorageProvider);
-      const storageKey = 'capeonn_windows_device_token';
+      const storageKey = 'capeonn_device_token';
       var winToken = await tokenStorage.readKey(storageKey);
       if (winToken == null || winToken.isEmpty) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -217,6 +218,10 @@ class PushNotificationService {
     } else if (projectId != null) {
       GoRouter.of(context).push('/projects/$projectId');
     }
+  }
+
+  void reset() {
+    _initialized = false;
   }
 
   void dispose() {

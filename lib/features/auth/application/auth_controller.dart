@@ -5,6 +5,7 @@ import '../data/auth_repository.dart';
 import '../../../../provider/auth/auth_user.dart';
 import '../../../core/services/app_permission_service.dart';
 import '../../../core/services/device_token_service.dart';
+import '../../../core/services/push_notification_service.dart';
 
 /// App-wide sign-in state:
 ///   loading        checking the saved token on start-up
@@ -34,6 +35,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
 
   Future<void> logout() async {
     await ref.read(deviceTokenServiceProvider).unregisterDeviceToken();
+    ref.read(pushNotificationServiceProvider).reset();
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);
   }
