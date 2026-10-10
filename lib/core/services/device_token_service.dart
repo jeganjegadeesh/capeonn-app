@@ -19,6 +19,12 @@ class DeviceTokenService {
 
   Future<void> registerDeviceToken({String? customToken, String? deviceName}) async {
     try {
+      if (customToken == null || customToken.trim().isEmpty) {
+        // Only register valid native/FCM device tokens
+        return;
+      }
+      final token = customToken.trim();
+
       final platform = kIsWeb
           ? 'web'
           : Platform.isIOS
@@ -26,9 +32,6 @@ class DeviceTokenService {
               : Platform.isWindows
                   ? 'windows'
                   : 'android';
-
-      final existingToken = await _tokenStorage.readKey(_deviceTokenKey);
-      final token = customToken ?? existingToken ?? 'device_${platform}_${DateTime.now().millisecondsSinceEpoch}';
 
       final payload = <String, dynamic>{
         'token': token,

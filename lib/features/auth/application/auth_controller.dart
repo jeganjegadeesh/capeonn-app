@@ -20,7 +20,6 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final user = await ref.read(authRepositoryProvider).restore();
     if (user != null) {
       AppPermissionService.requestNotificationPermission();
-      ref.read(deviceTokenServiceProvider).registerDeviceToken();
     }
     return user;
   }
@@ -31,7 +30,6 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final user = await ref.read(authRepositoryProvider).login(email: email, password: password);
     state = AsyncData(user);
     AppPermissionService.requestNotificationPermission();
-    ref.read(deviceTokenServiceProvider).registerDeviceToken();
   }
 
   Future<void> logout() async {
