@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../tasks/presentation/widgets/task_detail_dialog.dart';
@@ -26,6 +27,26 @@ class NotificationsDialog extends ConsumerStatefulWidget {
 
 class _NotificationsDialogState extends ConsumerState<NotificationsDialog> {
   NotificationCategory _selectedCategory = NotificationCategory.all;
+
+  String _friendlyErrorMessage(dynamic err) {
+    if (err is ApiException) {
+      if (err.isForbidden) return "You don't have permission to access notifications.";
+      if (err.isNotFound) return 'Notification service is currently unavailable.';
+      if (err.isValidation) return 'Invalid request. Please refresh and try again.';
+      return err.displayMessage;
+    }
+    final msg = ApiException.cleanMessage(err);
+    if (msg.contains('403') || msg.toLowerCase().contains('forbidden')) {
+      return "You don't have permission to access notifications.";
+    }
+    if (msg.contains('404') || msg.toLowerCase().contains('not found')) {
+      return 'Notification service is currently unavailable.';
+    }
+    if (msg.contains('422')) {
+      return 'Invalid request parameters. Please try again.';
+    }
+    return msg.isNotEmpty ? msg : 'Unable to load notifications. Please try again.';
+  }
 
   String _formatTime(DateTime? dt) {
     if (dt == null) return '';
@@ -113,15 +134,28 @@ class _NotificationsDialogState extends ConsumerState<NotificationsDialog> {
     if (!mounted) return;
     Navigator.of(context).pop();
 
-    if (item.taskId != null) {
+    // Route by notification type first so chat messages with task links open chat
+    if (item.type.startsWith('chat_') && item.conversationId != null) {
+      GoRouter.of(context).push('/chat/${item.conversationId}');
+    } else if (item.type.startsWith('task_') && item.taskId != null) {
       showDialog(
         context: context,
         builder: (_) => TaskDetailDialog(taskId: item.taskId!),
       );
-    } else if (item.conversationId != null) {
-      GoRouter.of(context).push('/chat/${item.conversationId}');
-    } else if (item.projectId != null) {
+    } else if (item.type.startsWith('project_') && item.projectId != null) {
       GoRouter.of(context).push('/projects/${item.projectId}');
+    } else {
+      // Fallback routing by available IDs
+      if (item.conversationId != null) {
+        GoRouter.of(context).push('/chat/${item.conversationId}');
+      } else if (item.taskId != null) {
+        showDialog(
+          context: context,
+          builder: (_) => TaskDetailDialog(taskId: item.taskId!),
+        );
+      } else if (item.projectId != null) {
+        GoRouter.of(context).push('/projects/${item.projectId}');
+      }
     }
   }
 
@@ -270,9 +304,17 @@ class _NotificationsDialogState extends ConsumerState<NotificationsDialog> {
                   error: (err, _) => Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text(
-                        'Failed to load notifications: $err',
-                        style: const TextStyle(color: AppColors.rose),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.rose, size: 36),
+                          const SizedBox(height: 10),
+                          Text(
+                            _friendlyErrorMessage(err),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.rose, fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ),
                     ),
                   ),

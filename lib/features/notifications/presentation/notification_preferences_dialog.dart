@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../application/notification_controller.dart';
@@ -26,6 +27,26 @@ class _NotificationPreferencesDialogState
     extends ConsumerState<NotificationPreferencesDialog> {
   bool _isSendingTest = false;
 
+  String _friendlyErrorMessage(dynamic err) {
+    if (err is ApiException) {
+      if (err.isForbidden) return "You don't have permission to modify notification preferences.";
+      if (err.isNotFound) return 'Notification preferences service is unavailable.';
+      if (err.isValidation) return 'Invalid preference data submitted.';
+      return err.displayMessage;
+    }
+    final msg = ApiException.cleanMessage(err);
+    if (msg.contains('403') || msg.toLowerCase().contains('forbidden')) {
+      return "You don't have permission to modify notification preferences.";
+    }
+    if (msg.contains('404') || msg.toLowerCase().contains('not found')) {
+      return 'Notification preferences service is unavailable.';
+    }
+    if (msg.contains('422')) {
+      return 'Push notification service is not configured on the server.';
+    }
+    return msg.isNotEmpty ? msg : 'Unable to load preferences. Please try again.';
+  }
+
   Future<void> _sendTestPush() async {
     setState(() => _isSendingTest = true);
     try {
@@ -37,7 +58,7 @@ class _NotificationPreferencesDialogState
       AppToast.success(context, msg);
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(context, e);
+      AppToast.error(context, _friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _isSendingTest = false);
     }
@@ -131,15 +152,50 @@ class _NotificationPreferencesDialogState
                   error: (err, _) => Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text(
-                        'Failed to load preferences: $err',
-                        style: const TextStyle(color: AppColors.rose),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.rose, size: 36),
+                          const SizedBox(height: 10),
+                          Text(
+                            _friendlyErrorMessage(err),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.rose, fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   data: (prefs) => ListView(
                     shrinkWrap: true,
                     children: [
+                      // Desktop WebSocket status banner
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'On Windows and web desktop, real-time alerts are delivered live via instant WebSocket push channels.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white70
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       _buildSwitchTile(
                         icon: Icons.notifications_active_outlined,
                         title: 'Push Notifications (FCM)',
@@ -181,6 +237,16 @@ class _NotificationPreferencesDialogState
                         ),
                       ),
                       _buildSwitchTile(
+                        icon: Icons.alternate_email_rounded,
+                        title: 'Chat Mentions Only',
+                        subtitle: 'Only notify me in chat when someone directly @mentions me',
+                        value: prefs.chatMentionsOnly,
+                        onChanged: (val) => _updatePreference(
+                          prefs,
+                          (p) => p.copyWith(chatMentionsOnly: val),
+                        ),
+                      ),
+                      _buildSwitchTile(
                         icon: Icons.folder_special_outlined,
                         title: 'Project Updates',
                         subtitle: 'Team memberships, completion requests, and file uploads',
@@ -188,6 +254,30 @@ class _NotificationPreferencesDialogState
                         onChanged: (val) => _updatePreference(
                           prefs,
                           (p) => p.copyWith(projectAlerts: val),
+                        ),
+                      ),
+                      _buildSwitchTile(
+                        icon: Icons.visibility_off_outlined,
+                        title: 'Hide Lock-Screen Previews',
+                        subtitle: 'Conceal private message snippets and content in push banners',
+                        value: prefs.hidePreviews,
+                        onChanged: (val) => _updatePreference(
+                          prefs,
+                          (p) => p.copyWith(hidePreviews: val),
+                        ),
+                      ),
+                      _buildSwitchTile(
+                        icon: Icons.bedtime_outlined,
+                        title: 'Quiet Hours (22:00 - 08:00)',
+                        subtitle: 'Mute push notifications during resting hours (urgent tasks still deliver)',
+                        value: prefs.quietHoursEnabled,
+                        onChanged: (val) => _updatePreference(
+                          prefs,
+                          (p) => p.copyWith(
+                            quietHoursEnabled: val,
+                            quietHoursStart: val ? '22:00' : null,
+                            quietHoursEnd: val ? '08:00' : null,
+                          ),
                         ),
                       ),
                     ],

@@ -84,6 +84,9 @@ class PushNotificationService {
 
       // 3. Retrieve and register token
       final token = await FirebaseMessaging.instance.getToken();
+      final fvm = token;
+      // ignore: avoid_print
+      print("FCM TOKEN $fvm");
       if (token != null) {
         await _registerTokenWithBackend(token);
       }
@@ -95,6 +98,10 @@ class PushNotificationService {
 
       // 5. Foreground messages listener
       _foregroundSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('FCM Foreground message received: title="${message.notification?.title}", body="${message.notification?.body}", data=${message.data}');
+        }
         _handleForegroundMessage(message);
       });
 
@@ -193,6 +200,8 @@ class PushNotificationService {
     final context = rootNavigatorKey.currentContext;
     if (context == null) return;
 
+    final type = (data['type'] ?? '').toString();
+
     final taskIdStr = data['task_id'];
     final taskId = taskIdStr is num
         ? taskIdStr.toInt()
@@ -208,15 +217,43 @@ class PushNotificationService {
         ? projIdStr.toInt()
         : (projIdStr is String ? int.tryParse(projIdStr) : null);
 
-    if (taskId != null) {
+    // Route by notification type first so chat messages linking tasks open chat
+    if (type.startsWith('chat_') && conversationId != null) {
+      GoRouter.of(context).push('/chat/$conversationId');
+    } else if (type.startsWith('task_') && taskId != null) {
       showDialog(
         context: context,
         builder: (_) => TaskDetailDialog(taskId: taskId),
       );
-    } else if (conversationId != null) {
-      GoRouter.of(context).push('/chat/$conversationId');
-    } else if (projectId != null) {
+    } else if (type.startsWith('project_') && projectId != null) {
       GoRouter.of(context).push('/projects/$projectId');
+    } else {
+      // Fallback routing if type is unspecified
+      if (conversationId != null) {
+        GoRouter.of(context).push('/chat/$conversationId');
+      } else if (taskId != null) {
+        showDialog(
+          context: context,
+          builder: (_) => TaskDetailDialog(taskId: taskId),
+        );
+      } else if (projectId != null) {
+        GoRouter.of(context).push('/projects/$projectId');
+      }
+    }
+  }
+
+  Future<void> unregisterDeviceToken() async {
+    try {
+      final tokenStorage = _ref.read(tokenStorageProvider);
+      final token = await tokenStorage.readKey('capeonn_device_token');
+      if (token != null && token.isNotEmpty) {
+        await _ref.read(notificationRepositoryProvider).unregisterDeviceToken(token);
+        await tokenStorage.deleteKey('capeonn_device_token');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error unregistering device token: $e');
+      }
     }
   }
 

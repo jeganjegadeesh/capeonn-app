@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -31,6 +32,15 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final user = await ref.read(authRepositoryProvider).login(email: email, password: password);
     state = AsyncData(user);
     AppPermissionService.requestNotificationPermission();
+
+    try {
+      await ref.read(pushNotificationServiceProvider).initialize();
+    } catch (e) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('Error initializing push notifications: $e');
+      }
+    }
   }
 
   Future<void> logout() async {

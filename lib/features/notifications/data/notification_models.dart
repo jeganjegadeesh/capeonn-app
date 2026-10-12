@@ -107,6 +107,11 @@ class NotificationPreferencesModel {
     required this.deadlineAlerts,
     required this.chatAlerts,
     required this.projectAlerts,
+    this.quietHoursEnabled = false,
+    this.quietHoursStart,
+    this.quietHoursEnd,
+    this.hidePreviews = false,
+    this.chatMentionsOnly = false,
   });
 
   final bool pushEnabled;
@@ -115,6 +120,11 @@ class NotificationPreferencesModel {
   final bool deadlineAlerts;
   final bool chatAlerts;
   final bool projectAlerts;
+  final bool quietHoursEnabled;
+  final String? quietHoursStart;
+  final String? quietHoursEnd;
+  final bool hidePreviews;
+  final bool chatMentionsOnly;
 
   factory NotificationPreferencesModel.defaults() {
     return const NotificationPreferencesModel(
@@ -124,6 +134,11 @@ class NotificationPreferencesModel {
       deadlineAlerts: true,
       chatAlerts: true,
       projectAlerts: true,
+      quietHoursEnabled: false,
+      quietHoursStart: null,
+      quietHoursEnd: null,
+      hidePreviews: false,
+      chatMentionsOnly: false,
     );
   }
 
@@ -135,6 +150,11 @@ class NotificationPreferencesModel {
       deadlineAlerts: json['deadline_alerts'] as bool? ?? true,
       chatAlerts: json['chat_alerts'] as bool? ?? true,
       projectAlerts: json['project_alerts'] as bool? ?? true,
+      quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
+      quietHoursStart: json['quiet_hours_start'] as String?,
+      quietHoursEnd: json['quiet_hours_end'] as String?,
+      hidePreviews: json['hide_previews'] as bool? ?? false,
+      chatMentionsOnly: json['chat_mentions_only'] as bool? ?? false,
     );
   }
 
@@ -146,6 +166,11 @@ class NotificationPreferencesModel {
       'deadline_alerts': deadlineAlerts,
       'chat_alerts': chatAlerts,
       'project_alerts': projectAlerts,
+      'quiet_hours_enabled': quietHoursEnabled,
+      'quiet_hours_start': quietHoursStart,
+      'quiet_hours_end': quietHoursEnd,
+      'hide_previews': hidePreviews,
+      'chat_mentions_only': chatMentionsOnly,
     };
   }
 
@@ -156,6 +181,11 @@ class NotificationPreferencesModel {
     bool? deadlineAlerts,
     bool? chatAlerts,
     bool? projectAlerts,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
+    bool? hidePreviews,
+    bool? chatMentionsOnly,
   }) {
     return NotificationPreferencesModel(
       pushEnabled: pushEnabled ?? this.pushEnabled,
@@ -164,6 +194,11 @@ class NotificationPreferencesModel {
       deadlineAlerts: deadlineAlerts ?? this.deadlineAlerts,
       chatAlerts: chatAlerts ?? this.chatAlerts,
       projectAlerts: projectAlerts ?? this.projectAlerts,
+      quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
+      quietHoursStart: quietHoursStart ?? this.quietHoursStart,
+      quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
+      hidePreviews: hidePreviews ?? this.hidePreviews,
+      chatMentionsOnly: chatMentionsOnly ?? this.chatMentionsOnly,
     );
   }
 }
