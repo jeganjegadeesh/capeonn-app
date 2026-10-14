@@ -69,8 +69,14 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(projectsListProvider);
+          ref.invalidate(projectDashboardProvider);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           // Top Header & Dashboard Metrics
           SliverToBoxAdapter(
             child: Padding(
@@ -354,6 +360,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/services/push_notification_service.dart';
+import '../../../core/shortcuts/app_shortcuts.dart';
+import '../../../core/shortcuts/command_palette_dialog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/widgets/app_toast.dart';
@@ -130,8 +133,10 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final navItems = _buildNavItems(user);
 
+    final Widget shellWidget;
+
     if (isDesktop) {
-      return Scaffold(
+      shellWidget = Scaffold(
         body: Row(
           children: [
             _Sidebar(
@@ -142,6 +147,108 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
             const VerticalDivider(width: 1),
             Expanded(
+              child: Column(
+                children: [
+                  _DesktopHeader(
+                    currentLocation: location,
+                    user: user,
+                  ),
+                  const ActiveTimerBanner(),
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey('page_${location}_${themeMode.name}'),
+                      child: widget.child,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      shellWidget = Scaffold(
+        appBar: AppBar(
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'CAPEONN',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  _titleForRoute(location),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Search & Navigation (Ctrl+K)',
+              icon: const Icon(Icons.search, size: 22),
+              onPressed: () => CommandPaletteDialog.show(context),
+            ),
+            Consumer(
+              builder: (context, ref, _) {
+                final unreadAsync = ref.watch(notificationUnreadCountProvider);
+                final count = unreadAsync.value ?? 0;
+                return IconButton(
+                  tooltip: 'Notifications',
+                  icon: Badge(
+                    isLabelVisible: count > 0,
+                    label: Text('$count', style: const TextStyle(fontSize: 10)),
+                    child: const Icon(Icons.notifications_outlined, size: 22),
+                  ),
+                  onPressed: () => NotificationsDialog.show(context),
+                );
+              },
+            ),
+            const ThemeToggleButton(compact: true),
+            IconButton(
+              tooltip: 'Change Password',
+              icon: const Icon(Icons.lock_reset, size: 22),
+              onPressed: () => context.push('/change-password'),
+            ),
+            IconButton(
+              tooltip: 'Sign Out',
+              icon: const Icon(Icons.logout, size: 22),
+              onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+            ),
+          ],
+        ),
+        drawer: Drawer(
+          child: SafeArea(
+            child: _Sidebar(
+              user: user,
+              currentLocation: location,
+              items: navItems,
+              isDrawer: true,
+              onSignOut: () {
+                Navigator.pop(context);
+                ref.read(authControllerProvider.notifier).logout();
+              },
+            ),
+          ),
+        ),
+        body: Column(
+          children: [
+            const ActiveTimerBanner(),
+            Expanded(
               child: KeyedSubtree(
                 key: ValueKey('page_${location}_${themeMode.name}'),
                 child: widget.child,
@@ -149,95 +256,50 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
           ],
         ),
+        bottomNavigationBar: _buildBottomBar(context, location, navItems),
       );
     }
 
-    // Mobile / Tablet Layout
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'CAPEONN',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                _titleForRoute(location),
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Consumer(
-            builder: (context, ref, _) {
-              final unreadAsync = ref.watch(notificationUnreadCountProvider);
-              final count = unreadAsync.value ?? 0;
-              return IconButton(
-                tooltip: 'Notifications',
-                icon: Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count', style: const TextStyle(fontSize: 10)),
-                  child: const Icon(Icons.notifications_outlined, size: 22),
-                ),
-                onPressed: () => NotificationsDialog.show(context),
-              );
-            },
-          ),
-          const ThemeToggleButton(compact: true),
-          IconButton(
-            tooltip: 'Change Password',
-            icon: const Icon(Icons.lock_reset, size: 22),
-            onPressed: () => context.push('/change-password'),
-          ),
-          IconButton(
-            tooltip: 'Sign Out',
-            icon: const Icon(Icons.logout, size: 22),
-            onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-          ),
-        ],
+    final guardedShell = PopScope(
+      canPop: location == '/home',
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else if (location != '/home') {
+          context.go('/home');
+        }
+      },
+      child: shellWidget,
+    );
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+            CommandPaletteDialog.show(context),
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
+            CommandPaletteDialog.show(context),
+        const SingleActivator(LogicalKeyboardKey.slash, control: true): () =>
+            AppShortcuts.showHelpDialog(context),
+        const SingleActivator(LogicalKeyboardKey.slash, meta: true): () =>
+            AppShortcuts.showHelpDialog(context),
+        const SingleActivator(LogicalKeyboardKey.keyN, control: true): () {
+          if (user.canViewTasks) context.go('/tasks');
+        },
+        const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () {
+          if (user.canViewTasks) context.go('/tasks');
+        },
+        const SingleActivator(LogicalKeyboardKey.keyR, control: true): () {
+          AppToast.info(context, 'Refreshed');
+        },
+        const SingleActivator(LogicalKeyboardKey.f5): () {
+          AppToast.info(context, 'Refreshed');
+        },
+      },
+      child: FocusTraversalGroup(
+        policy: OrderedTraversalPolicy(),
+        child: guardedShell,
       ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: _Sidebar(
-            user: user,
-            currentLocation: location,
-            items: navItems,
-            isDrawer: true,
-            onSignOut: () {
-              Navigator.pop(context);
-              ref.read(authControllerProvider.notifier).logout();
-            },
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          const ActiveTimerBanner(),
-          Expanded(
-            child: KeyedSubtree(
-              key: ValueKey('page_${location}_${themeMode.name}'),
-              child: widget.child,
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomBar(context, location, navItems),
     );
   }
 
@@ -474,6 +536,52 @@ class _Sidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () {
+                      if (isDrawer) Navigator.pop(context);
+                      CommandPaletteDialog.show(context);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHover,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search, size: 16, color: AppColors.textMuted),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Quick Search...',
+                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(3),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              'Ctrl+K',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Text(
@@ -731,6 +839,182 @@ class _SidebarTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DesktopHeader extends ConsumerWidget {
+  const _DesktopHeader({
+    required this.currentLocation,
+    required this.user,
+  });
+
+  final String currentLocation;
+  final AuthUser user;
+
+  String _titleForRoute(String route) {
+    if (route.startsWith('/reports')) return 'Reports & Analytics';
+    if (route.startsWith('/projects')) return 'Projects';
+    if (route.startsWith('/tasks')) return 'My Tasks';
+    if (route.startsWith('/chat')) return 'Internal Chat';
+    if (route.startsWith('/attendance')) return 'Attendance';
+    if (route.startsWith('/leaves')) return 'Leaves';
+    if (route.startsWith('/holidays')) return 'Holiday Calendar';
+    if (route.startsWith('/employees')) return 'Employees';
+    if (route.startsWith('/hierarchy')) return 'Org Hierarchy';
+    if (route.startsWith('/departments')) return 'Departments';
+    if (route.startsWith('/designations')) return 'Designations';
+    if (route.startsWith('/company')) return 'Company Profile';
+    if (route.startsWith('/roles')) return 'Roles & Permissions';
+    if (route.startsWith('/settings')) return 'System Settings';
+    if (route.startsWith('/audit')) return 'Audit Logs';
+    if (route.startsWith('/change-password')) return 'Change Password';
+    return 'Dashboard';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final title = _titleForRoute(currentLocation);
+    final (roleBg, roleFg) = AppColors.rolePillColors(user.roleSlug);
+
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          // Breadcrumb Title
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(width: 24),
+
+          // Command Palette Search Trigger
+          InkWell(
+            onTap: () => CommandPaletteDialog.show(context),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 260,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHover,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, size: 16, color: AppColors.textMuted),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Search or jump to...',
+                      style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      'Ctrl+K',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textSecondary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+
+          // Notifications
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadAsync = ref.watch(notificationUnreadCountProvider);
+              final count = unreadAsync.value ?? 0;
+              return IconButton(
+                tooltip: 'Notifications',
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text('$count', style: const TextStyle(fontSize: 9)),
+                  child: const Icon(Icons.notifications_outlined, size: 20),
+                ),
+                onPressed: () => NotificationsDialog.show(context),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+
+          // Keyboard Shortcuts
+          IconButton(
+            tooltip: 'Keyboard Shortcuts (Ctrl+/)',
+            icon: const Icon(Icons.keyboard_outlined, size: 20),
+            onPressed: () => AppShortcuts.showHelpDialog(context),
+          ),
+          const SizedBox(width: 4),
+
+          // Theme Toggle
+          const ThemeToggleButton(compact: true),
+          const SizedBox(width: 8),
+
+          // Divider
+          Container(
+            height: 20,
+            width: 1,
+            color: AppColors.border,
+          ),
+          const SizedBox(width: 12),
+
+          // User Profile Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: roleBg,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              user.roleName.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: roleFg,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            user.name,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Change Password',
+            icon: const Icon(Icons.lock_reset, size: 18),
+            onPressed: () => context.push('/change-password'),
+          ),
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout, size: 18),
+            onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+          ),
+        ],
       ),
     );
   }

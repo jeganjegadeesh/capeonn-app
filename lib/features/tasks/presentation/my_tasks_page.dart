@@ -45,9 +45,19 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (_currentView == 'review_queue') {
+            ref.invalidate(reviewQueueProvider);
+          } else {
+            ref.invalidate(myTasksProvider);
+            await ref.read(activeTimerProvider.notifier).checkActiveTimer();
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Page Header
@@ -341,6 +351,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

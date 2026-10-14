@@ -54,6 +54,7 @@ class CapeonnApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      scrollBehavior: const CapeonnScrollBehavior(),
       routerConfig: ref.watch(routerProvider),
       builder: (context, child) {
         final currentDark = Theme.of(context).brightness == Brightness.dark;

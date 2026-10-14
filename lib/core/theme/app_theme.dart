@@ -1,4 +1,32 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// Cross-platform scroll behavior supporting mouse, trackpad, and touch drag,
+/// with platform-ergonomic physics (bouncing on iOS/macOS, clamping on Android).
+class CapeonnScrollBehavior extends MaterialScrollBehavior {
+  const CapeonnScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    switch (getPlatform(context)) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return const BouncingScrollPhysics();
+      case TargetPlatform.android:
+      default:
+        return const ClampingScrollPhysics();
+    }
+  }
+}
 
 class AppColors {
   AppColors._();
@@ -165,6 +193,13 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         scrolledUnderElevation: 1,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: surfaceColor,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
         titleTextStyle: TextStyle(
           color: textPrimaryColor,
           fontSize: 18,
@@ -246,6 +281,19 @@ class AppTheme {
         elevation: 6,
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(false),
+        interactive: true,
+        radius: const Radius.circular(8),
+        thickness: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.hovered) ? 8.0 : 5.0,
+        ),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.hovered)
+              ? const Color(0xFF94A3B8)
+              : const Color(0xFFCBD5E1),
+        ),
+      ),
     );
 
   }
@@ -294,6 +342,13 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         scrolledUnderElevation: 1,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: surfaceColor,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
         titleTextStyle: TextStyle(
           color: textPrimaryColor,
           fontSize: 18,
@@ -374,6 +429,19 @@ class AppTheme {
         ),
         elevation: 6,
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(false),
+        interactive: true,
+        radius: const Radius.circular(8),
+        thickness: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.hovered) ? 8.0 : 5.0,
+        ),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.hovered)
+              ? const Color(0xFF64748B)
+              : const Color(0xFF334155),
+        ),
       ),
     );
 

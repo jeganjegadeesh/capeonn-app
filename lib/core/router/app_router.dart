@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/theme_provider.dart';
+import 'page_title_observer.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/change_password_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
@@ -45,6 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: refresh,
+    observers: [PageTitleObserver()],
     redirect: (context, state) {
       final location = state.matchedLocation;
 

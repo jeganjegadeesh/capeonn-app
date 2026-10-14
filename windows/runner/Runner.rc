@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "capeonn_app" "\0"
+            VALUE "CompanyName", "Capeonn Technologies" "\0"
+            VALUE "FileDescription", "Capeonn — Enterprise Employee & Work Management Platform" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "capeonn_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Capeonn. All rights reserved." "\0"
             VALUE "OriginalFilename", "capeonn_app.exe" "\0"
-            VALUE "ProductName", "capeonn_app" "\0"
+            VALUE "ProductName", "Capeonn" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

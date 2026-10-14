@@ -26,8 +26,20 @@ class DashboardOverviewPage extends ConsumerWidget {
     final isMobile = MediaQuery.sizeOf(context).width < 768;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(isMobile ? 16 : 24),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (user.canViewOrganization) {
+            ref.invalidate(companyProvider);
+            ref.invalidate(departmentsListProvider);
+            ref.invalidate(designationsListProvider);
+          }
+          if (user.canViewEmployees) {
+            ref.invalidate(employeesListProvider);
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1100),
@@ -398,6 +410,7 @@ class DashboardOverviewPage extends ConsumerWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }
