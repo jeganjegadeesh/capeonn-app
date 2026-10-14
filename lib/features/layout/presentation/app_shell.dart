@@ -273,6 +273,15 @@ class _AppShellState extends ConsumerState<AppShell> {
       ));
     }
 
+    if (user.canViewReports) {
+      list.add(const _NavItem(
+        title: 'Reports & Analytics',
+        icon: Icons.bar_chart_outlined,
+        activeIcon: Icons.bar_chart_rounded,
+        route: '/reports',
+      ));
+    }
+
     // Attendance & Leaves are strictly hidden for Super Admin
     if (user.canAccessAttendance && (user.canViewAttendance || user.canRecordAttendance)) {
       list.add(const _NavItem(title: 'Attendance', icon: Icons.access_time_outlined, activeIcon: Icons.access_time_filled, route: '/attendance'));
@@ -308,6 +317,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   String _titleForRoute(String route) {
+    if (route.startsWith('/reports')) return 'Reports & Analytics';
     if (route.startsWith('/projects')) return 'Projects';
     if (route.startsWith('/tasks')) return 'My Tasks';
     if (route.startsWith('/chat')) return 'Internal Chat';

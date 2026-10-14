@@ -51,9 +51,9 @@ class _NotificationPreferencesDialogState
     setState(() => _isSendingTest = true);
     try {
       final res = await ref.read(notificationRepositoryProvider).sendTestPush();
+      if (!mounted) return;
       ref.invalidate(notificationUnreadCountProvider);
       ref.invalidate(notificationsListProvider(false));
-      if (!mounted) return;
       final msg = res['message'] as String? ?? 'Test push dispatched successfully';
       AppToast.success(context, msg);
     } catch (e) {

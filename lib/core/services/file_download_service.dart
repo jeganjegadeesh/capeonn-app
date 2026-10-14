@@ -192,6 +192,87 @@ class FileDownloadService {
     }
   }
 
+  /// Save raw bytes or text content directly to disk/browser:
+  /// - Windows: Saved to Windows Downloads folder (e.g. C:\Users\<user>\Downloads)
+  /// - Web: Trigger native browser file download into local Downloads folder
+  /// - Mobile (Android/iOS): Saved to capeonn/(mediatype)/filename in local storage
+  static Future<String?> saveFileBytes({
+    required BuildContext context,
+    required List<int> bytes,
+    required String fileName,
+    String? mimeType,
+    bool autoOpen = true,
+  }) async {
+    // 1. Web platform: Trigger browser Blob download
+    if (kIsWeb) {
+      try {
+        final downloaded = await downloadFileOnWeb(bytes, fileName);
+        if (downloaded && context.mounted) {
+          AppToast.success(context, 'Downloaded $fileName to Downloads folder');
+        }
+        return fileName;
+      } catch (e) {
+        if (context.mounted) {
+          AppToast.error(context, 'Download failed: $e');
+        }
+        return null;
+      }
+    }
+
+    // 2. Mobile platforms: ensure storage/download permissions
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      await AppPermissionService.ensureDownloadPermission();
+    }
+
+    try {
+      final sanitizedName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final targetDirectory = await _getTargetDownloadDirectory(fileName, mimeType);
+
+      // Ensure unique filename if already exists
+      String savePath = '${targetDirectory.path}${Platform.pathSeparator}$sanitizedName';
+      final file = File(savePath);
+      if (await file.exists()) {
+        final dotIdx = sanitizedName.lastIndexOf('.');
+        final namePart = dotIdx != -1 ? sanitizedName.substring(0, dotIdx) : sanitizedName;
+        final extPart = dotIdx != -1 ? sanitizedName.substring(dotIdx) : '';
+        savePath = '${targetDirectory.path}${Platform.pathSeparator}${namePart}_${DateTime.now().millisecondsSinceEpoch}$extPart';
+      }
+
+      final targetFile = File(savePath);
+      await targetFile.writeAsBytes(bytes, flush: true);
+
+      final finalFileName = savePath.split(Platform.pathSeparator).last;
+
+      if (context.mounted) {
+        if (!kIsWeb && Platform.isWindows) {
+          AppToast.success(context, 'Saved to Downloads: $finalFileName', title: 'File Exported');
+        } else if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+          final mediaFolder = getMediaTypeFolder(fileName, mimeType);
+          AppToast.success(context, 'Saved to capeonn/$mediaFolder: $finalFileName', title: 'File Exported');
+        } else {
+          AppToast.success(context, 'Saved: $finalFileName', title: 'File Exported');
+        }
+      }
+
+      // Open file if requested
+      if (autoOpen) {
+        try {
+          final result = await OpenFilex.open(savePath);
+          if (result.type != ResultType.done && context.mounted) {
+            AppToast.info(context, 'File saved: $savePath');
+          }
+        } catch (_) {}
+      }
+
+      return savePath;
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.error(context, 'Export saving failed: $e');
+      }
+      return null;
+    }
+  }
+
   /// Resolve destination directory according to user requirements:
   /// - Windows: C:\Users\<user>\Downloads
   /// - Android/iOS Mobile: capeonn/(mediatype)/

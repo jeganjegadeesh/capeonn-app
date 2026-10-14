@@ -32,6 +32,11 @@ class ApiException implements Exception {
     if (isUnauthorized) {
       return message.isNotEmpty ? message : 'Your session has expired. Please sign in again.';
     }
+    if (message.isNotEmpty &&
+        message != 'Please review the highlighted fields.' &&
+        message != 'Something went wrong.') {
+      return message;
+    }
     for (final messages in errors.values) {
       if (messages.isNotEmpty) return messages.first;
     }
