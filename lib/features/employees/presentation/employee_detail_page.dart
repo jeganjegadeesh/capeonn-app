@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/employee_controller.dart';
 import '../application/employee_details_controller.dart';
@@ -72,6 +73,7 @@ class _EmployeeDetailPageState extends ConsumerState<EmployeeDetailPage> with Si
           final (roleBg, roleFg) = AppColors.rolePillColors(emp.roleSlug);
           final (statusBg, statusFg) = AppColors.statusPillColors(emp.isActive);
           final isMobile = MediaQuery.sizeOf(context).width < 768;
+          final isSelf = user?.id == emp.id;
 
           return SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? 16 : 24),
@@ -96,17 +98,36 @@ class _EmployeeDetailPageState extends ConsumerState<EmployeeDetailPage> with Si
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
+                                UserAvatar(
+                                  name: emp.name,
+                                  avatarUrl: emp.avatarUrl,
                                   radius: isMobile ? 28 : 36,
                                   backgroundColor: roleBg,
-                                  child: Text(
-                                    emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
-                                    style: TextStyle(
-                                      color: roleFg,
-                                      fontSize: isMobile ? 22 : 28,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  foregroundColor: roleFg,
+                                  showEditBadge: isSelf,
+                                  tooltip: isSelf ? 'Change profile photo' : null,
+                                  onTap: isSelf
+                                      ? () {
+                                          AvatarEditDialog.show(
+                                            context,
+                                            user: user!,
+                                            onUpdated: (_) {
+                                              ref.invalidate(employeeDetailProvider(widget.employeeId));
+                                            },
+                                          );
+                                        }
+                                      : null,
+                                  onEditTap: isSelf
+                                      ? () {
+                                          AvatarEditDialog.show(
+                                            context,
+                                            user: user!,
+                                            onUpdated: (_) {
+                                              ref.invalidate(employeeDetailProvider(widget.employeeId));
+                                            },
+                                          );
+                                        }
+                                      : null,
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
@@ -369,8 +390,8 @@ class _OverviewTab extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Edit Personal & Contact Info'),
-          content: SizedBox(
-            width: 440,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(

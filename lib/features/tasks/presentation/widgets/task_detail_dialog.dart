@@ -315,204 +315,220 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                         : AppColors.surface,
                     border: Border(bottom: BorderSide(color: AppColors.border)),
                   ),
-                  child: Row(
-                    children: [
-                      // Hours Comparison (Estimated vs Actual)
-                      Expanded(
-                        child: Column(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 540;
+
+                      final timeInfoWidget = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                'Time: ',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                              Text(
+                                '${task.actualHours.toStringAsFixed(1)}h actual',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              if (task.estimatedHours != null) ...[
+                                Text(
+                                  '/  ${task.estimatedHours}h est.',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: task.timeVarianceColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    task.timeVarianceDisplay,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: task.timeVarianceColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (task.isCompleted && task.deadlineVariance != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: task.deadlineVarianceColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    task.deadlineVarianceDisplay,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: task.deadlineVarianceColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (task.estimatedHours != null && task.estimatedHours! > 0) ...[
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: (task.actualHours / task.estimatedHours!).clamp(0.0, 1.0),
+                                backgroundColor: AppColors.surfaceHover,
+                                color: task.actualHours > task.estimatedHours!
+                                    ? AppColors.rose
+                                    : AppColors.primary,
+                                minHeight: 6,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+
+                      final actionButtons = Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (isTimerRunningOnThisTask) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (activeTimer.isPaused)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      margin: const EdgeInsets.only(right: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFD97706),
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                      child: const Text('PAUSED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    ),
+                                  Text(
+                                    activeTimer.formattedTime,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (activeTimer.isPaused)
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  await ref.read(activeTimerProvider.notifier).resumeTimer(task.id);
+                                  ref.invalidate(taskDetailProvider(widget.taskId));
+                                },
+                                icon: const Icon(Icons.play_arrow, size: 14),
+                                label: const Text('Resume'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFD97706),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                ),
+                              )
+                            else
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  await ref.read(activeTimerProvider.notifier).pauseTimer(task.id);
+                                  ref.invalidate(taskDetailProvider(widget.taskId));
+                                },
+                                icon: const Icon(Icons.pause, size: 14),
+                                label: const Text('Pause'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.surfaceHover,
+                                  foregroundColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                ),
+                              ),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await ref.read(activeTimerProvider.notifier).stopTimer(task.id);
+                                ref.invalidate(taskDetailProvider(widget.taskId));
+                              },
+                              icon: const Icon(Icons.stop, size: 16),
+                              label: const Text('Stop Timer'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.rose,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ] else ...[
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  await ref.read(activeTimerProvider.notifier).startTimer(task.id);
+                                  ref.invalidate(taskDetailProvider(widget.taskId));
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    AppToast.error(context, e);
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.play_arrow, size: 16),
+                              label: const Text('Start Timer'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => ManualTimeDialog(task: task),
+                              );
+                            },
+                            icon: const Icon(Icons.add_alarm, size: 14),
+                            label: const Text('Log Hours'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                        ],
+                      );
+
+                      if (isNarrow) {
+                        return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Time: ',
-                                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                ),
-                                Text(
-                                  '${task.actualHours.toStringAsFixed(1)}h actual',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                                if (task.estimatedHours != null) ...[
-                                  Text(
-                                    '  /  ${task.estimatedHours}h est.',
-                                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: task.timeVarianceColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      task.timeVarianceDisplay,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: task.timeVarianceColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                if (task.isCompleted && task.deadlineVariance != null) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: task.deadlineVarianceColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      task.deadlineVarianceDisplay,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: task.deadlineVarianceColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            if (task.estimatedHours != null && task.estimatedHours! > 0) ...[
-                              const SizedBox(height: 6),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: (task.actualHours / task.estimatedHours!).clamp(0.0, 1.0),
-                                  backgroundColor: AppColors.surfaceHover,
-                                  color: task.actualHours > task.estimatedHours!
-                                      ? AppColors.rose
-                                      : AppColors.primary,
-                                  minHeight: 6,
-                                ),
-                              ),
-                            ],
+                            timeInfoWidget,
+                            const SizedBox(height: 10),
+                            actionButtons,
                           ],
-                        ),
-                      ),
+                        );
+                      }
 
-                      const SizedBox(width: 16),
-
-                      // Timer Action Buttons
-                      if (isTimerRunningOnThisTask) ...[
-                        // Running timer ticker
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (activeTimer.isPaused)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  margin: const EdgeInsets.only(right: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFD97706),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: const Text('PAUSED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
-                                ),
-                              Text(
-                                activeTimer.formattedTime,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (activeTimer.isPaused)
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              await ref.read(activeTimerProvider.notifier).resumeTimer(task.id);
-                              ref.invalidate(taskDetailProvider(widget.taskId));
-                            },
-                            icon: const Icon(Icons.play_arrow, size: 14),
-                            label: const Text('Resume'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD97706),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            ),
-                          )
-                        else
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              await ref.read(activeTimerProvider.notifier).pauseTimer(task.id);
-                              ref.invalidate(taskDetailProvider(widget.taskId));
-                            },
-                            icon: const Icon(Icons.pause, size: 14),
-                            label: const Text('Pause'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.surfaceHover,
-                              foregroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            ),
-                          ),
-                        const SizedBox(width: 6),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            await ref.read(activeTimerProvider.notifier).stopTimer(task.id);
-                            ref.invalidate(taskDetailProvider(widget.taskId));
-                          },
-                          icon: const Icon(Icons.stop, size: 16),
-                          label: const Text('Stop Timer'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.rose,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ] else ...[
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            try {
-                              await ref.read(activeTimerProvider.notifier).startTimer(task.id);
-                              ref.invalidate(taskDetailProvider(widget.taskId));
-                            } catch (e) {
-                              if (context.mounted) {
-                                AppToast.error(context, e);
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.play_arrow, size: 16),
-                          label: const Text('Start Timer'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(width: 8),
-
-                      // Manual Log Time button
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => ManualTimeDialog(task: task),
-                          );
-                        },
-                        icon: const Icon(Icons.add_alarm, size: 14),
-                        label: const Text('Log Hours'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: BorderSide(color: AppColors.border),
-                        ),
-                      ),
-                    ],
+                      return Row(
+                        children: [
+                          Expanded(child: timeInfoWidget),
+                          const SizedBox(width: 16),
+                          actionButtons,
+                        ],
+                      );
+                    },
                   ),
                 ),
 
@@ -532,6 +548,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                 // Tab Bar
                 TabBar(
                   controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
                   labelColor: AppColors.primary,
                   unselectedLabelColor: AppColors.textSecondary,
                   indicatorColor: AppColors.primary,
@@ -1264,29 +1282,34 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
               backgroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               title: const Text('Reassign Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              content: SizedBox(
-                width: 420,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reassigning "${task.title}" to a different team member:',
-                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedUserId,
-                      decoration: InputDecoration(
-                        labelText: 'Select New Assignee',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Reassigning "${task.title}" to a different team member:',
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       ),
-                      items: members.map((m) {
-                        return DropdownMenuItem<int>(
-                          value: m.userId,
-                          child: Text('${m.name} (${m.roleName ?? m.projectRole})'),
-                        );
-                      }).toList(),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        initialValue: selectedUserId,
+                        decoration: InputDecoration(
+                          labelText: 'Select New Assignee',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        items: members.map((m) {
+                          return DropdownMenuItem<int>(
+                            value: m.userId,
+                            child: Text(
+                              '${m.name} (${m.roleName ?? m.projectRole})',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
                       onChanged: (val) {
                         setDialogState(() {
                           selectedUserId = val;
@@ -1313,7 +1336,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
                   ],
                 ),
               ),
-              actions: [
+            ),
+            actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
                   child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
@@ -1364,9 +1388,12 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Deliverables & Attachments (${taskFiles.length})',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Text(
+                      'Deliverables & Attachments (${taskFiles.length})',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.upload_file, size: 16),
@@ -1462,7 +1489,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Attach Task File'),
-          content: Column(
+          content: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
@@ -1484,7 +1512,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> with Single
               ),
             ],
           ),
-          actions: [
+        ),
+        actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../organization/application/organization_controller.dart';
 import '../application/employee_controller.dart';
@@ -41,14 +42,18 @@ class EmployeesPage extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Employees',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                          Expanded(
+                            child: Text(
+                              'Employees',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           if (user?.canManageEmployees == true)
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
@@ -301,17 +306,13 @@ class EmployeesPage extends ConsumerWidget {
                                         Row(
                                           crossAxisAlignment: CrossAxisAlignment.center,
                                           children: [
-                                            CircleAvatar(
+                                            UserAvatar(
+                                              name: emp.name,
+                                              avatarUrl: emp.avatarUrl,
                                               radius: 18,
                                               backgroundColor: roleBg,
-                                              child: Text(
-                                                emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
-                                                style: TextStyle(
-                                                  color: roleFg,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
+                                              foregroundColor: roleFg,
+                                              fontSize: 14,
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
@@ -457,17 +458,13 @@ class EmployeesPage extends ConsumerWidget {
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                   child: Row(
                                     children: [
-                                      CircleAvatar(
+                                      UserAvatar(
+                                        name: emp.name,
+                                        avatarUrl: emp.avatarUrl,
                                         radius: 20,
                                         backgroundColor: roleBg,
-                                        child: Text(
-                                          emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
-                                          style: TextStyle(
-                                            color: roleFg,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                          ),
-                                        ),
+                                        foregroundColor: roleFg,
+                                        fontSize: 15,
                                       ),
                                       const SizedBox(width: 16),
                                       Expanded(

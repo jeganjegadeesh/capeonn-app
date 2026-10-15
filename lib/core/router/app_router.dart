@@ -62,8 +62,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!signedIn) return _publicRoutes.contains(location) ? null : '/login';
 
       final user = auth.value!;
-      // Super Admin: Hide and block attendance/leaves screens
-      if (user.isSuperAdmin && (location.startsWith('/attendance') || location.startsWith('/leaves'))) {
+      // Block attendance if user cannot access attendance
+      if (!user.canAccessAttendance && location.startsWith('/attendance')) {
+        return '/home';
+      }
+      // Super Admin: Hide and block personal leaves screen
+      if (user.isSuperAdmin && location.startsWith('/leaves')) {
         return '/home';
       }
       // Non-Super Admin: Block roles, system settings, and audit logs

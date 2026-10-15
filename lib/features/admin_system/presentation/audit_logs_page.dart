@@ -171,8 +171,8 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
             ),
           ],
         ),
-        content: SizedBox(
-          width: 520,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

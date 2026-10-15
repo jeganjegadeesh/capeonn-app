@@ -80,6 +80,24 @@ class AuthRepository {
     }
   }
 
+  /// Uploads a new profile avatar for the authenticated user.
+  Future<AuthUser> uploadAvatar(List<int> bytes, String fileName) async {
+    final formData = FormData.fromMap({
+      'avatar': MultipartFile.fromBytes(bytes, filename: fileName),
+    });
+
+    final body = await _send(() => _dio.post('/auth/avatar', data: formData));
+    final data = body['data'] as Map<String, dynamic>;
+    return AuthUser.fromJson(data);
+  }
+
+  /// Removes the profile avatar for the authenticated user.
+  Future<AuthUser> deleteAvatar() async {
+    final body = await _send(() => _dio.delete('/auth/avatar'));
+    final data = body['data'] as Map<String, dynamic>;
+    return AuthUser.fromJson(data);
+  }
+
   /// Returns the server's confirmation message.
   Future<String> changePassword({
     required String currentPassword,

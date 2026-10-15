@@ -118,6 +118,22 @@ class AttendanceRepository {
     }
   }
 
+  Future<AttendanceDailyStatusResult> getDailyStatus({
+    String? date,
+    int? departmentId,
+  }) async {
+    try {
+      final params = <String, dynamic>{};
+      if (date != null && date.isNotEmpty) params['date'] = date;
+      if (departmentId != null) params['department_id'] = departmentId;
+
+      final res = await _dio.get('/attendance/daily-status', queryParameters: params);
+      return AttendanceDailyStatusResult.fromJson(Map<String, dynamic>.from(res.data['data'] as Map));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<List<AttendanceRegularization>> getRegularizations({
     String? status,
     int perPage = 50,

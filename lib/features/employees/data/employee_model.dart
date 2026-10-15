@@ -44,6 +44,8 @@ class Employee {
     required this.id,
     required this.name,
     required this.email,
+    this.avatarUrl,
+    this.avatarPath,
     this.phone,
     this.employeeCode,
     this.isActive = true,
@@ -67,6 +69,8 @@ class Employee {
   final int id;
   final String name;
   final String email;
+  final String? avatarUrl;
+  final String? avatarPath;
   final String? phone;
   final String? employeeCode;
   final bool isActive;
@@ -137,6 +141,8 @@ class Employee {
       id: (json['id'] as num).toInt(),
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String?,
+      avatarPath: json['avatar_path'] as String?,
       phone: json['phone'] as String?,
       employeeCode: json['employee_code'] as String?,
       isActive: json['is_active'] as bool? ?? true,

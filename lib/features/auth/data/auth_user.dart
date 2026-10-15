@@ -7,6 +7,8 @@ class AuthUser {
     required this.roleSlug,
     required this.roleName,
     required this.roleLevel,
+    this.avatarUrl,
+    this.avatarPath,
     this.phone,
     this.employeeCode,
     this.isActive = true,
@@ -33,6 +35,8 @@ class AuthUser {
   final int id;
   final String name;
   final String email;
+  final String? avatarUrl;
+  final String? avatarPath;
   final String? phone;
   final String? employeeCode;
   final bool isActive;
@@ -70,8 +74,7 @@ class AuthUser {
   bool get isTeamLead => roleSlug == 'team_lead';
   bool get isEmployee => roleSlug == 'employee';
 
-  /// Attendance and leaves are hidden for Super Admin accounts
-  bool get canAccessAttendance => isAttendanceApplicable && !isSuperAdmin;
+  /// Personal leaves remain hidden for Super Admin accounts
   bool get canAccessLeaves => !isSuperAdmin;
 
   /// Use this to show/hide screens and buttons. The server enforces the same rules anyway.
@@ -87,9 +90,12 @@ class AuthUser {
   bool get canManageEmployees => can('employees.manage');
   bool get canViewHierarchy => can('employees.view');
 
-  bool get canViewAttendance => canAccessAttendance && can('attendance.view');
-  bool get canRecordAttendance => canAccessAttendance && can('attendance.record');
-  bool get canManageAttendance => can('attendance.manage');
+  bool get canViewAttendance => can('attendance.view') || isAdmin;
+  bool get canRecordAttendance => isAttendanceApplicable && can('attendance.record');
+  bool get canManageAttendance => can('attendance.manage') || isAdmin;
+
+  /// Attendance module access: enabled if user can view records, manage attendance, or record attendance
+  bool get canAccessAttendance => canViewAttendance || canManageAttendance || canRecordAttendance;
 
   bool get canViewLeaves => canAccessLeaves && can('leave.view');
   bool get canApplyLeave => canAccessLeaves && can('leave.apply');
@@ -142,6 +148,8 @@ class AuthUser {
       id: (json['id'] as num).toInt(),
       name: json['name'] as String,
       email: json['email'] as String,
+      avatarUrl: json['avatar_url'] as String?,
+      avatarPath: json['avatar_path'] as String?,
       phone: json['phone'] as String?,
       employeeCode: json['employee_code'] as String?,
       isActive: json['is_active'] as bool? ?? true,
@@ -168,6 +176,71 @@ class AuthUser {
       skills: skills,
       certifications: certs,
       permissions: permissions,
+    );
+  }
+
+  AuthUser copyWith({
+    int? id,
+    String? name,
+    String? email,
+    String? avatarUrl,
+    String? avatarPath,
+    bool clearAvatar = false,
+    String? roleSlug,
+    String? roleName,
+    int? roleLevel,
+    String? phone,
+    String? employeeCode,
+    bool? isActive,
+    bool? isAttendanceApplicable,
+    double? salary,
+    int? companyId,
+    String? companyName,
+    int? departmentId,
+    String? departmentName,
+    String? designationName,
+    String? reportsToName,
+    String? dob,
+    String? gender,
+    String? address,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? employmentType,
+    String? probationEndDate,
+    List<String>? skills,
+    List<Map<String, dynamic>>? certifications,
+    Map<String, String>? permissions,
+  }) {
+    return AuthUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      avatarUrl: clearAvatar ? null : (avatarUrl ?? this.avatarUrl),
+      avatarPath: clearAvatar ? null : (avatarPath ?? this.avatarPath),
+      roleSlug: roleSlug ?? this.roleSlug,
+      roleName: roleName ?? this.roleName,
+      roleLevel: roleLevel ?? this.roleLevel,
+      phone: phone ?? this.phone,
+      employeeCode: employeeCode ?? this.employeeCode,
+      isActive: isActive ?? this.isActive,
+      isAttendanceApplicable: isAttendanceApplicable ?? this.isAttendanceApplicable,
+      salary: salary ?? this.salary,
+      companyId: companyId ?? this.companyId,
+      companyName: companyName ?? this.companyName,
+      departmentId: departmentId ?? this.departmentId,
+      departmentName: departmentName ?? this.departmentName,
+      designationName: designationName ?? this.designationName,
+      reportsToName: reportsToName ?? this.reportsToName,
+      dob: dob ?? this.dob,
+      gender: gender ?? this.gender,
+      address: address ?? this.address,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
+      employmentType: employmentType ?? this.employmentType,
+      probationEndDate: probationEndDate ?? this.probationEndDate,
+      skills: skills ?? this.skills,
+      certifications: certifications ?? this.certifications,
+      permissions: permissions ?? this.permissions,
     );
   }
 }

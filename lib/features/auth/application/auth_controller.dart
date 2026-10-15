@@ -50,6 +50,28 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     state = const AsyncData(null);
   }
 
+  /// Uploads and updates the user's avatar.
+  Future<AuthUser> uploadAvatar(List<int> bytes, String fileName) async {
+    final user = await ref.read(authRepositoryProvider).uploadAvatar(bytes, fileName);
+    state = AsyncData(user);
+    return user;
+  }
+
+  /// Deletes the user's avatar.
+  Future<AuthUser> deleteAvatar() async {
+    final user = await ref.read(authRepositoryProvider).deleteAvatar();
+    state = AsyncData(user);
+    return user;
+  }
+
+  /// Refreshes the user profile from the server.
+  Future<void> refreshUser() async {
+    final user = await ref.read(authRepositoryProvider).restore();
+    if (user != null) {
+      state = AsyncData(user);
+    }
+  }
+
   /// Called by the HTTP layer when the server rejects our token (expired or revoked).
   Future<void> sessionExpired() async {
     await ref.read(tokenStorageProvider).clear();

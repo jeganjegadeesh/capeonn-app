@@ -135,35 +135,44 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
                 // Header Row
                 Row(
                   children: [
-                    const Icon(Icons.chat_bubble_outline, color: AppColors.primary, size: 28),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Internal Chat',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.chat_bubble_outline, color: AppColors.primary, size: 28),
+                          const SizedBox(width: 10),
+                          const Flexible(
+                            child: Text(
+                              'Internal Chat',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          unreadCountAsync.when(
+                            data: (count) => count > 0
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.rose,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '$count new',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    unreadCountAsync.when(
-                      data: (count) => count > 0
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.rose,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '$count new',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.add, size: 18),
                       label: Text(isDesktop ? 'New Conversation' : 'New'),

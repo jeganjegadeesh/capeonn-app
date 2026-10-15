@@ -33,34 +33,43 @@ class AuthScaffold extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Modern Brand Monogram
+                      // Modern Brand Logo
                       Center(
                         child: Container(
-                          width: 52,
-                          height: 52,
+                          width: 58,
+                          height: 58,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.secondary],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.35),
+                                color: AppColors.primary.withValues(alpha: 0.25),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'C',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 28,
-                              letterSpacing: -1,
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.asset(
+                            'assets/images/capeonn_logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.primary, AppColors.secondary],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'C',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 28,
+                                  letterSpacing: -1,
+                                ),
+                              ),
                             ),
                           ),
                         ),

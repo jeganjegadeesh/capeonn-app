@@ -64,25 +64,27 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _currentView == 'review_queue' ? 'Task Review Queue' : 'My Tasks & Time Tracking',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _currentView == 'review_queue' ? 'Task Review Queue' : 'My Tasks & Time Tracking',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _currentView == 'review_queue'
-                          ? 'Review work submitted by project members, approve tasks, or request revisions.'
-                          : 'Track your assigned work, record active timers, and meet project milestones.',
-                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        _currentView == 'review_queue'
+                            ? 'Review work submitted by project members, approve tasks, or request revisions.'
+                            : 'Track your assigned work, record active timers, and meet project milestones.',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Refresh tasks',
@@ -364,7 +366,9 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 640;
-        final cardWidth = isWide ? (constraints.maxWidth - 36) / 4 : (constraints.maxWidth - 12) / 2;
+        final cardWidth = isWide
+            ? (constraints.maxWidth - 36) / 4
+            : (constraints.maxWidth < 360 ? constraints.maxWidth : (constraints.maxWidth - 12) / 2);
 
         return Wrap(
           spacing: 12,
@@ -401,22 +405,29 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
             child: Icon(icon, size: 22, color: color),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              Text(
-                title,
-                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-              ),
-            ],
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -570,9 +581,11 @@ class _ActiveTimerHeroCard extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+
+          final iconWidget = Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
@@ -583,47 +596,45 @@ class _ActiveTimerHeroCard extends ConsumerWidget {
               size: 28,
               color: Colors.white,
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isPaused ? 'WORK TIME RECORDING PAUSED' : 'CURRENTLY RECORDING WORK TIME',
-                  style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 1.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
+          );
+
+          final titleColumn = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isPaused ? 'WORK TIME RECORDING PAUSED' : 'CURRENTLY RECORDING WORK TIME',
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 1.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
-                const SizedBox(height: 2),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                entry.taskTitle ?? 'Task #${entry.taskId}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (entry.projectName != null)
                 Text(
-                  entry.taskTitle ?? 'Task #${entry.taskId}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  'Project: ${entry.projectName}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (entry.projectName != null)
-                  Text(
-                    'Project: ${entry.projectName}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
+            ],
+          );
 
-          // Live digital clock with paused indicator
-          Container(
+          final timerBadge = Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.25),
@@ -662,46 +673,39 @@ class _ActiveTimerHeroCard extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
+          );
 
-          const SizedBox(width: 12),
+          final resumePauseButton = isPaused
+              ? ElevatedButton.icon(
+                  onPressed: () async {
+                    await ref.read(activeTimerProvider.notifier).resumeTimer(entry.taskId);
+                    ref.invalidate(myTasksProvider);
+                  },
+                  icon: const Icon(Icons.play_arrow, size: 16),
+                  label: const Text('Resume'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFFD97706),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                )
+              : ElevatedButton.icon(
+                  onPressed: () async {
+                    await ref.read(activeTimerProvider.notifier).pauseTimer(entry.taskId);
+                    ref.invalidate(myTasksProvider);
+                  },
+                  icon: const Icon(Icons.pause, size: 16),
+                  label: const Text('Pause'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.9),
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                );
 
-          // Pause / Resume Button
-          if (isPaused)
-            ElevatedButton.icon(
-              onPressed: () async {
-                await ref.read(activeTimerProvider.notifier).resumeTimer(entry.taskId);
-                ref.invalidate(myTasksProvider);
-              },
-              icon: const Icon(Icons.play_arrow, size: 16),
-              label: const Text('Resume'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFFD97706),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                textStyle: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            )
-          else
-            ElevatedButton.icon(
-              onPressed: () async {
-                await ref.read(activeTimerProvider.notifier).pauseTimer(entry.taskId);
-                ref.invalidate(myTasksProvider);
-              },
-              icon: const Icon(Icons.pause, size: 16),
-              label: const Text('Pause'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.9),
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                textStyle: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-
-          const SizedBox(width: 8),
-
-          // Stop button
-          ElevatedButton.icon(
+          final stopButton = ElevatedButton.icon(
             onPressed: () async {
               await ref.read(activeTimerProvider.notifier).stopTimer(entry.taskId);
               ref.invalidate(myTasksProvider);
@@ -714,8 +718,48 @@ class _ActiveTimerHeroCard extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
-        ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    iconWidget,
+                    const SizedBox(width: 14),
+                    Expanded(child: titleColumn),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    timerBadge,
+                    resumePauseButton,
+                    stopButton,
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              iconWidget,
+              const SizedBox(width: 16),
+              Expanded(child: titleColumn),
+              const SizedBox(width: 16),
+              timerBadge,
+              const SizedBox(width: 12),
+              resumePauseButton,
+              const SizedBox(width: 8),
+              stopButton,
+            ],
+          );
+        },
       ),
     );
   }
@@ -886,82 +930,82 @@ class _MyTaskCard extends ConsumerWidget {
                 const SizedBox(height: 12),
 
                 // Footer: Deadline, Log Manual Time, Hours
-                Row(
-                  children: [
-                    Icon(
-                      Icons.event_outlined,
-                      size: 14,
-                      color: task.isOverdue ? AppColors.rose : AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      task.deadlineDisplay,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: task.isOverdue ? FontWeight.bold : FontWeight.normal,
-                        color: task.isOverdue ? AppColors.rose : AppColors.textSecondary,
-                      ),
-                    ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 440;
 
-                    if (task.isOverdue) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.rose.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'Overdue',
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.rose),
+                    final deadlinePills = [
+                      Icon(
+                        Icons.event_outlined,
+                        size: 14,
+                        color: task.isOverdue ? AppColors.rose : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        task.deadlineDisplay,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: task.isOverdue ? FontWeight.bold : FontWeight.normal,
+                          color: task.isOverdue ? AppColors.rose : AppColors.textSecondary,
                         ),
                       ),
-                    ] else if (task.isDueToday) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
+                      if (task.isOverdue) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.rose.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Overdue',
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.rose),
+                          ),
                         ),
-                        child: const Text(
-                          'Due Today',
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                      ] else if (task.isDueToday) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Due Today',
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                          ),
                         ),
-                      ),
-                    ] else if (task.isDueSoon) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
+                      ] else if (task.isDueSoon) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Due in ${task.daysRemaining}d',
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                          ),
                         ),
-                        child: Text(
-                          'Due in ${task.daysRemaining}d',
-                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                      ],
+                      if (task.isCompleted && task.deadlineVariance != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: task.deadlineVarianceColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            task.deadlineVarianceDisplay,
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: task.deadlineVarianceColor),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ];
 
-                    if (task.isCompleted && task.deadlineVariance != null) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: task.deadlineVarianceColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          task.deadlineVarianceDisplay,
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: task.deadlineVarianceColor),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(width: 14),
-
-                    TextButton.icon(
+                    final logHoursButton = TextButton.icon(
                       onPressed: () {
                         showDialog(
                           context: context,
@@ -975,30 +1019,68 @@ class _MyTaskCard extends ConsumerWidget {
                         foregroundColor: AppColors.textSecondary,
                         textStyle: const TextStyle(fontSize: 11),
                       ),
-                    ),
+                    );
 
-                    const Spacer(),
+                    final hoursRow = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${task.actualHours.toStringAsFixed(1)}h',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        if (task.estimatedHours != null) ...[
+                          Text(' / ${task.estimatedHours}h', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: task.timeVarianceColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              task.timeVarianceDisplay,
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: task.timeVarianceColor),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
 
-                    Text(
-                      '${task.actualHours.toStringAsFixed(1)}h',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                    ),
-                    if (task.estimatedHours != null) ...[
-                      Text(' / ${task.estimatedHours}h', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: task.timeVarianceColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          task.timeVarianceDisplay,
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: task.timeVarianceColor),
-                        ),
-                      ),
-                    ],
-                  ],
+                    if (isMobile) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              ...deadlinePills,
+                              const Spacer(),
+                              logHoursButton,
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Text(
+                                'Actual Time: ',
+                                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                              ),
+                              hoursRow,
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        ...deadlinePills,
+                        const SizedBox(width: 14),
+                        logHoursButton,
+                        const Spacer(),
+                        hoursRow,
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -1041,82 +1123,88 @@ class _ReviewQueueTaskCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.rate_review_outlined, size: 12, color: Color(0xFFD97706)),
-                          SizedBox(width: 4),
-                          Text(
-                            'Pending Review',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 500;
+
+                    final badges = Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: task.priorityColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        task.priority.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: task.priorityColor,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.rate_review_outlined, size: 12, color: Color(0xFFD97706)),
+                              SizedBox(width: 4),
+                              Text(
+                                'Pending Review',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                    if (task.projectName != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceHover,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          task.projectName!,
-                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                        ),
-                      ),
-                    ],
-                    if (task.waitingTimeHuman != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.schedule, size: 12, color: Color(0xFFD97706)),
-                            const SizedBox(width: 4),
-                            Text(
-                              task.waitingTimeHuman!,
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: task.priorityColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            task.priority.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: task.priorityColor,
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                    const Spacer(),
-                    ElevatedButton.icon(
+                        if (task.projectName != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceHover,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              task.projectName!,
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (task.waitingTimeHuman != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.schedule, size: 12, color: Color(0xFFD97706)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  task.waitingTimeHuman!,
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+
+                    final actionButton = ElevatedButton.icon(
                       onPressed: () {
                         showDialog(
                           context: context,
@@ -1134,8 +1222,30 @@ class _ReviewQueueTaskCard extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
-                    ),
-                  ],
+                    );
+
+                    if (isMobile) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          badges,
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: actionButton,
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: badges),
+                        const SizedBox(width: 12),
+                        actionButton,
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 Text(

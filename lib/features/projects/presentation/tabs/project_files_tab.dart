@@ -50,12 +50,15 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
             children: [
               Icon(Icons.cloud_upload_outlined, color: AppColors.primary),
               SizedBox(width: 8),
-              Text('Upload Project File'),
+              Expanded(
+                child: Text('Upload Project File', overflow: TextOverflow.ellipsis),
+              ),
             ],
           ),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 460),
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -150,7 +153,8 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
               ],
             ),
           ),
-          actions: [
+        ),
+        actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
@@ -291,7 +295,8 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
         ),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -358,21 +363,25 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
                     children: [
                       const Text('Linked Task:', style: TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          showDialog(
-                            context: context,
-                            builder: (_) => TaskDetailDialog(taskId: file.taskId!),
-                          );
-                        },
-                        child: Text(
-                          file.taskTitle ?? 'Task #${file.taskId}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                            decoration: TextDecoration.underline,
+                      Flexible(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            showDialog(
+                              context: context,
+                              builder: (_) => TaskDetailDialog(taskId: file.taskId!),
+                            );
+                          },
+                          child: Text(
+                            file.taskTitle ?? 'Task #${file.taskId}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -388,7 +397,8 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
             ],
           ),
         ),
-        actions: [
+      ),
+      actions: [
           TextButton.icon(
             icon: const Icon(Icons.copy, size: 16),
             label: const Text('Copy Link'),
@@ -445,46 +455,69 @@ class _ProjectFilesTabState extends ConsumerState<ProjectFilesTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Filter Bar & Upload Action
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search files...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(projectFilesSearchProvider(widget.project.id).notifier).state = '';
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onSubmitted: (val) {
-                    ref.read(projectFilesSearchProvider(widget.project.id).notifier).state = val.trim();
-                  },
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 440;
+              final searchField = TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search files...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            ref.read(projectFilesSearchProvider(widget.project.id).notifier).state = '';
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  isDense: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              if (canUpload)
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.upload_file, size: 18),
-                  label: const Text('Upload File'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () => _showUploadDialog(context),
-                ),
-            ],
+                onSubmitted: (val) {
+                  ref.read(projectFilesSearchProvider(widget.project.id).notifier).state = val.trim();
+                },
+              );
+
+              final uploadButton = canUpload
+                  ? ElevatedButton.icon(
+                      icon: const Icon(Icons.upload_file, size: 18),
+                      label: const Text('Upload File'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => _showUploadDialog(context),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchField,
+                    if (canUpload) ...[
+                      const SizedBox(height: 10),
+                      uploadButton,
+                    ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: searchField),
+                  if (canUpload) ...[
+                    const SizedBox(width: 12),
+                    uploadButton,
+                  ],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
 
@@ -718,6 +751,8 @@ class _FileCard extends StatelessWidget {
                   Text(
                     '${file.formattedSize} • Uploaded by ${file.uploaderName}',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (file.description != null && file.description!.isNotEmpty)
                     Padding(

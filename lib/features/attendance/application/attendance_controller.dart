@@ -63,6 +63,24 @@ final teamAttendanceRecordsProvider = FutureProvider.autoDispose<List<Attendance
   return ref.watch(attendanceRepositoryProvider).getRecords();
 });
 
+final attendanceDailyStatusProvider = FutureProvider.autoDispose.family<AttendanceDailyStatusResult, (String?, int?)>((ref, arg) async {
+  final (date, deptId) = arg;
+  return ref.watch(attendanceRepositoryProvider).getDailyStatus(date: date, departmentId: deptId);
+});
+
+typedef AttendanceFilterArgs = ({String? date, int? departmentId, int? userId, String? status, bool? isFlagged});
+
+final allAttendanceRecordsProvider = FutureProvider.autoDispose.family<List<AttendanceRecord>, AttendanceFilterArgs>((ref, args) async {
+  return ref.watch(attendanceRepositoryProvider).getRecords(
+    date: args.date,
+    departmentId: args.departmentId,
+    userId: args.userId,
+    status: args.status,
+    isFlagged: args.isFlagged,
+  );
+});
+
 final regularizationsProvider = FutureProvider.autoDispose<List<AttendanceRegularization>>((ref) async {
   return ref.watch(attendanceRepositoryProvider).getRegularizations();
 });
+

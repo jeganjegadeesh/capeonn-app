@@ -37,14 +37,18 @@ class DepartmentsPage extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Departments',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                          Expanded(
+                            child: Text(
+                              'Departments',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           if (user?.canManageOrganization == true)
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
@@ -657,8 +661,9 @@ class _DepartmentFormDialogState extends ConsumerState<_DepartmentFormDialog> {
           padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -761,6 +766,7 @@ class _DepartmentFormDialogState extends ConsumerState<_DepartmentFormDialog> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

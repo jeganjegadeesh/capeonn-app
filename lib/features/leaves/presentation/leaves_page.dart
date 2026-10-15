@@ -307,8 +307,8 @@ class _LeavesPageState extends ConsumerState<LeavesPage> with SingleTickerProvid
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Apply for Leave'),
-          content: SizedBox(
-            width: 440,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(

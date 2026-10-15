@@ -90,7 +90,11 @@ class _HolidaysPageState extends ConsumerState<HolidaysPage> {
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       DropdownButton<int>(
                         value: _selectedYear,
@@ -101,7 +105,6 @@ class _HolidaysPageState extends ConsumerState<HolidaysPage> {
                           if (val != null) setState(() => _selectedYear = val);
                         },
                       ),
-                      const Spacer(),
                       if (canManage)
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
@@ -169,8 +172,8 @@ class _HolidaysPageState extends ConsumerState<HolidaysPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Add Company Holiday'),
-          content: SizedBox(
-            width: 400,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(

@@ -21,10 +21,10 @@ class AppConfig {
   // ===========================================================================
 
   // ---> DEV URL (Active)
-  static String get apiBaseUrl => devUrl;
+  // static String get apiBaseUrl => devUrl;
 
   // ---> LOCAL URL (Uncomment line below and comment out DEV line above to use local)
-  // static String get apiBaseUrl => localUrl;
+  static String get apiBaseUrl => localUrl;
 
   // ===========================================================================
   // WEBSOCKET MODE CONFIGURATION
@@ -63,7 +63,7 @@ class AppConfig {
   /// Local Server URL (10.0.2.2 on Android emulator, localhost on Web / Desktop / iOS)
   static String get localUrl {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000/api/v1';
+      return 'http://192.168.1.10:8000/api/v1';
     }
     return 'http://localhost:8000/api/v1';
   }

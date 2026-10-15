@@ -153,8 +153,10 @@ class ReportFilterBar extends ConsumerWidget {
           ),
 
           // Filters and Export
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // Department Selector
               departmentsAsync.when(
@@ -202,8 +204,6 @@ class ReportFilterBar extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (err, _) => const SizedBox.shrink(),
               ),
-
-              const SizedBox(width: 10),
 
               // Export CSV Button
               ElevatedButton.icon(

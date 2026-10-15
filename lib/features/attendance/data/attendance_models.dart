@@ -32,6 +32,8 @@ class AttendanceRecord {
     required this.id,
     required this.userId,
     this.userName,
+    this.avatarUrl,
+    this.avatarPath,
     this.employeeCode,
     this.departmentName,
     required this.date,
@@ -50,6 +52,8 @@ class AttendanceRecord {
   final int id;
   final int userId;
   final String? userName;
+  final String? avatarUrl;
+  final String? avatarPath;
   final String? employeeCode;
   final String? departmentName;
   final String date;
@@ -69,6 +73,8 @@ class AttendanceRecord {
       id: (json['id'] as num).toInt(),
       userId: (json['user_id'] as num).toInt(),
       userName: json['user_name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      avatarPath: json['avatar_path'] as String?,
       employeeCode: json['employee_code'] as String?,
       departmentName: json['department_name'] as String?,
       date: json['date'] as String,
@@ -133,6 +139,13 @@ class AttendanceSummary {
     required this.daysHalfDay,
     required this.totalHours,
     required this.totalRecords,
+    this.eligibleUsersCount,
+    this.todayClockedInCount,
+    this.todayClockedOutCount,
+    this.todayLateCount,
+    this.todayFlaggedCount,
+    this.todayAbsentCount,
+    this.isOrganization = false,
   });
 
   final int year;
@@ -142,6 +155,13 @@ class AttendanceSummary {
   final int daysHalfDay;
   final double totalHours;
   final int totalRecords;
+  final int? eligibleUsersCount;
+  final int? todayClockedInCount;
+  final int? todayClockedOutCount;
+  final int? todayLateCount;
+  final int? todayFlaggedCount;
+  final int? todayAbsentCount;
+  final bool isOrganization;
 
   factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
     return AttendanceSummary(
@@ -152,6 +172,126 @@ class AttendanceSummary {
       daysHalfDay: (json['days_half_day'] as num?)?.toInt() ?? 0,
       totalHours: (json['total_hours'] as num?)?.toDouble() ?? 0.0,
       totalRecords: (json['total_records'] as num?)?.toInt() ?? 0,
+      eligibleUsersCount: (json['eligible_users_count'] as num?)?.toInt(),
+      todayClockedInCount: (json['today_clocked_in_count'] as num?)?.toInt(),
+      todayClockedOutCount: (json['today_clocked_out_count'] as num?)?.toInt(),
+      todayLateCount: (json['today_late_count'] as num?)?.toInt(),
+      todayFlaggedCount: (json['today_flagged_count'] as num?)?.toInt(),
+      todayAbsentCount: (json['today_absent_count'] as num?)?.toInt(),
+      isOrganization: json['is_organization'] as bool? ?? false,
+    );
+  }
+}
+
+class AttendanceDailyUserStatus {
+  const AttendanceDailyUserStatus({
+    required this.userId,
+    required this.userName,
+    this.email,
+    this.avatarUrl,
+    this.avatarPath,
+    this.employeeCode,
+    this.departmentName,
+    this.designationName,
+    required this.date,
+    this.attendanceId,
+    required this.status,
+    required this.isClockedIn,
+    required this.isClockedOut,
+    this.clockInAt,
+    this.clockOutAt,
+    this.clockInLocationName,
+    this.isFlagged = false,
+    this.flaggedReason,
+    this.geofenceStatus = 'unknown',
+    this.totalMinutes = 0,
+    this.totalHoursFormatted = '0h 00m',
+  });
+
+  final int userId;
+  final String userName;
+  final String? email;
+  final String? avatarUrl;
+  final String? avatarPath;
+  final String? employeeCode;
+  final String? departmentName;
+  final String? designationName;
+  final String date;
+  final int? attendanceId;
+  final String status;
+  final bool isClockedIn;
+  final bool isClockedOut;
+  final String? clockInAt;
+  final String? clockOutAt;
+  final String? clockInLocationName;
+  final bool isFlagged;
+  final String? flaggedReason;
+  final String geofenceStatus;
+  final int totalMinutes;
+  final String totalHoursFormatted;
+
+  factory AttendanceDailyUserStatus.fromJson(Map<String, dynamic> json) {
+    return AttendanceDailyUserStatus(
+      userId: (json['user_id'] as num).toInt(),
+      userName: json['user_name'] as String? ?? 'Employee',
+      email: json['email'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      avatarPath: json['avatar_path'] as String?,
+      employeeCode: json['employee_code'] as String?,
+      departmentName: json['department_name'] as String?,
+      designationName: json['designation_name'] as String?,
+      date: json['date'] as String? ?? '',
+      attendanceId: (json['attendance_id'] as num?)?.toInt(),
+      status: json['status'] as String? ?? 'absent',
+      isClockedIn: json['is_clocked_in'] as bool? ?? false,
+      isClockedOut: json['is_clocked_out'] as bool? ?? false,
+      clockInAt: json['clock_in_at'] as String?,
+      clockOutAt: json['clock_out_at'] as String?,
+      clockInLocationName: json['clock_in_location_name'] as String?,
+      isFlagged: json['is_flagged'] as bool? ?? false,
+      flaggedReason: json['flagged_reason'] as String?,
+      geofenceStatus: json['geofence_status'] as String? ?? 'unknown',
+      totalMinutes: (json['total_minutes'] as num?)?.toInt() ?? 0,
+      totalHoursFormatted: json['total_hours_formatted'] as String? ?? '0h 00m',
+    );
+  }
+}
+
+class AttendanceDailyStatusResult {
+  const AttendanceDailyStatusResult({
+    required this.date,
+    required this.totalUsers,
+    required this.presentCount,
+    required this.lateCount,
+    required this.clockedInCount,
+    required this.absentCount,
+    required this.flaggedCount,
+    required this.users,
+  });
+
+  final String date;
+  final int totalUsers;
+  final int presentCount;
+  final int lateCount;
+  final int clockedInCount;
+  final int absentCount;
+  final int flaggedCount;
+  final List<AttendanceDailyUserStatus> users;
+
+  factory AttendanceDailyStatusResult.fromJson(Map<String, dynamic> json) {
+    final rawUsers = json['users'] as List? ?? [];
+    return AttendanceDailyStatusResult(
+      date: json['date'] as String? ?? '',
+      totalUsers: (json['total_users'] as num?)?.toInt() ?? 0,
+      presentCount: (json['present_count'] as num?)?.toInt() ?? 0,
+      lateCount: (json['late_count'] as num?)?.toInt() ?? 0,
+      clockedInCount: (json['clocked_in_count'] as num?)?.toInt() ?? 0,
+      absentCount: (json['absent_count'] as num?)?.toInt() ?? 0,
+      flaggedCount: (json['flagged_count'] as num?)?.toInt() ?? 0,
+      users: rawUsers
+          .whereType<Map<String, dynamic>>()
+          .map(AttendanceDailyUserStatus.fromJson)
+          .toList(),
     );
   }
 }

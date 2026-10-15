@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 
 /// Placeholder landing screen: proves login works and shows what the server says this user may do.
@@ -43,9 +44,14 @@ class HomePage extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
+                          UserAvatar(
+                            name: user.name,
+                            avatarUrl: user.avatarUrl,
                             radius: 26,
-                            child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?'),
+                            showEditBadge: true,
+                            tooltip: 'Change profile photo',
+                            onTap: () => AvatarEditDialog.show(context, user: user),
+                            onEditTap: () => AvatarEditDialog.show(context, user: user),
                           ),
                           const SizedBox(width: 16),
                           Expanded(

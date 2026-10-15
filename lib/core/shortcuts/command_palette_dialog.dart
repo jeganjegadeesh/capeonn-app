@@ -278,7 +278,8 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
       onKeyEvent: _handleKeyEvent,
       child: Center(
         child: Container(
-          width: 600,
+          constraints: const BoxConstraints(maxWidth: 600),
+          width: double.infinity,
           margin: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 40),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
@@ -523,23 +524,40 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
                     color: AppColors.surfaceHover,
                     border: Border(top: BorderSide(color: AppColors.border)),
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Navigation Hints: ',
-                        style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                      ),
-                      _HintPill(label: '↑↓', text: 'Navigate'),
-                      const SizedBox(width: 8),
-                      _HintPill(label: '↵', text: 'Select'),
-                      const SizedBox(width: 8),
-                      _HintPill(label: 'esc', text: 'Dismiss'),
-                      const Spacer(),
-                      Text(
-                        'Capeonn v1.0',
-                        style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                      ),
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, footerConstraints) {
+                      final isMobile = footerConstraints.maxWidth < 450;
+                      if (isMobile) {
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const _HintPill(label: '↵', text: 'Select'),
+                            Text(
+                              'Capeonn v1.0',
+                              style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Text(
+                            'Navigation Hints: ',
+                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                          const _HintPill(label: '↑↓', text: 'Navigate'),
+                          const SizedBox(width: 8),
+                          const _HintPill(label: '↵', text: 'Select'),
+                          const SizedBox(width: 8),
+                          const _HintPill(label: 'esc', text: 'Dismiss'),
+                          const Spacer(),
+                          Text(
+                            'Capeonn v1.0',
+                            style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],

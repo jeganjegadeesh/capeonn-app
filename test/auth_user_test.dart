@@ -51,5 +51,23 @@ void main() {
     expect(user.roleSlug, '');
     expect(user.companyName, isNull);
     expect(user.permissions, isEmpty);
+    expect(user.avatarUrl, isNull);
+    expect(user.avatarPath, isNull);
+  });
+
+  test('parses avatar_url and avatar_path correctly', () {
+    final user = AuthUser.fromJson({
+      ...json,
+      'avatar_url': 'http://localhost:8000/api/v1/users/7/avatar',
+      'avatar_path': 'avatars/avatar_7_123.jpg',
+    });
+
+    expect(user.avatarUrl, 'http://localhost:8000/api/v1/users/7/avatar');
+    expect(user.avatarPath, 'avatars/avatar_7_123.jpg');
+
+    final updated = user.copyWith(clearAvatar: true);
+    expect(updated.avatarUrl, isNull);
+    expect(updated.avatarPath, isNull);
+    expect(updated.name, 'Meera Manager');
   });
 }

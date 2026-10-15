@@ -33,7 +33,9 @@ void main() {
       expect(user.isAdmin, isTrue);
       expect(user.isHR, isFalse);
       expect(user.isAttendanceApplicable, isFalse);
-      expect(user.canAccessAttendance, isFalse);
+      expect(user.canAccessAttendance, isTrue);
+      expect(user.canRecordAttendance, isFalse);
+      expect(user.canManageAttendance, isTrue);
       expect(user.canAccessLeaves, isFalse);
       expect(user.canManageRoles, isTrue);
       expect(user.canManageSystem, isTrue);

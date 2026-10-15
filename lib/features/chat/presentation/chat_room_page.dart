@@ -290,8 +290,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Message'),
-        content: SizedBox(
-          width: 440,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
           child: TextField(
             controller: editCtrl,
             maxLines: 4,
@@ -343,8 +343,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             Text('Pinned Messages (${pinnedMessages.length})'),
           ],
         ),
-        content: SizedBox(
-          width: 440,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
           child: ListView.separated(
             shrinkWrap: true,
             itemCount: pinnedMessages.length,
@@ -392,8 +392,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
           title: const Text('Group Settings'),
-          content: SizedBox(
-            width: 440,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -567,8 +567,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                     Text(conv.projectId != null ? 'Link Project Task' : 'Link a Task'),
                   ],
                 ),
-                content: SizedBox(
-                  width: 440,
+                content: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
                   child: tasks.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.all(20),
@@ -647,8 +647,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
             ),
           ],
         ),
-        content: SizedBox(
-          width: 480,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -835,8 +835,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Add Members to Group'),
-          content: SizedBox(
-            width: 400,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
             child: available.isEmpty
                 ? const Text('All active colleagues are already in this group.')
                 : ListView.builder(

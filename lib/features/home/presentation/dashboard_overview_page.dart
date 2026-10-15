@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../organization/application/organization_controller.dart';
 import '../../employees/application/employee_controller.dart';
@@ -66,17 +67,14 @@ class DashboardOverviewPage extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
+                      UserAvatar(
+                        name: user.name,
+                        avatarUrl: user.avatarUrl,
                         radius: isMobile ? 24 : 32,
-                        backgroundColor: AppColors.primary,
-                        child: Text(
-                          user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: isMobile ? 20 : 26,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        showEditBadge: true,
+                        tooltip: 'Change profile photo',
+                        onTap: () => AvatarEditDialog.show(context, user: user),
+                        onEditTap: () => AvatarEditDialog.show(context, user: user),
                       ),
                       SizedBox(width: isMobile ? 14 : 20),
                       Expanded(
@@ -330,11 +328,14 @@ class DashboardOverviewPage extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            const Text(
-                              'Assigned Permissions & Scopes',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            const Expanded(
+                              child: Text(
+                                'Assigned Permissions & Scopes',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(

@@ -1082,19 +1082,24 @@ class _OverviewTab extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.person_pin_outlined, size: 20, color: AppColors.primary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Project Team Lead',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.person_pin_outlined, size: 20, color: AppColors.primary),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Project Team Lead',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               if (canAssign && !isLocked) ...[
                                 TextButton(
@@ -1239,10 +1244,14 @@ class _OverviewTab extends StatelessWidget {
                                             m.name,
                                             style: TextStyle(
                                                 fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                           Text(
                                             m.projectRole,
                                             style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
@@ -1771,9 +1780,12 @@ class _ActivityHistoryTab extends StatelessWidget {
                     Row(
                       children: [
                         if (act.userName != null) ...[
-                          Text(
-                            'by ${act.userName}',
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          Flexible(
+                            child: Text(
+                              'by ${act.userName}',
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Text('•', style: TextStyle(color: AppColors.textMuted)),

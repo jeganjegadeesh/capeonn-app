@@ -11,6 +11,7 @@ import '../../../core/shortcuts/command_palette_dialog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/auth_user.dart';
 import '../../chat/application/presence_controller.dart';
@@ -171,19 +172,28 @@ class _AppShellState extends ConsumerState<AppShell> {
         appBar: AppBar(
           title: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'CAPEONN',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    letterSpacing: 1.2,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/images/capeonn_logo.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'CAPEONN',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -219,15 +229,50 @@ class _AppShellState extends ConsumerState<AppShell> {
               },
             ),
             const ThemeToggleButton(compact: true),
-            IconButton(
-              tooltip: 'Change Password',
-              icon: const Icon(Icons.lock_reset, size: 22),
-              onPressed: () => context.push('/change-password'),
-            ),
-            IconButton(
-              tooltip: 'Sign Out',
-              icon: const Icon(Icons.logout, size: 22),
-              onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 22),
+              tooltip: 'More actions',
+              onSelected: (value) {
+                if (value == 'edit_avatar') {
+                  AvatarEditDialog.show(context, user: user);
+                } else if (value == 'change_password') {
+                  context.push('/change-password');
+                } else if (value == 'logout') {
+                  ref.read(authControllerProvider.notifier).logout();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit_avatar',
+                  child: Row(
+                    children: [
+                      Icon(Icons.photo_camera_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('Profile Photo'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'change_password',
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_reset, size: 18),
+                      SizedBox(width: 8),
+                      Text('Change Password'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 18),
+                      SizedBox(width: 8),
+                      Text('Sign Out'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -344,8 +389,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       ));
     }
 
-    // Attendance & Leaves are strictly hidden for Super Admin
-    if (user.canAccessAttendance && (user.canViewAttendance || user.canRecordAttendance)) {
+    if (user.canAccessAttendance) {
       list.add(const _NavItem(title: 'Attendance', icon: Icons.access_time_outlined, activeIcon: Icons.access_time_filled, route: '/attendance'));
     }
 
@@ -464,27 +508,36 @@ class _Sidebar extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
+                        color: AppColors.primary.withValues(alpha: 0.25),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
                     ],
                   ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'C',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.asset(
+                    'assets/images/capeonn_logo.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.secondary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'C',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -689,50 +742,56 @@ class _Sidebar extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
+                      UserAvatar(
+                        name: user.name,
+                        avatarUrl: user.avatarUrl,
                         radius: 18,
-                        backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                        child: Text(
-                          user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
+                        showEditBadge: true,
+                        tooltip: 'Change profile photo',
+                        onTap: () {
+                          if (isDrawer) Navigator.pop(context);
+                          AvatarEditDialog.show(context, user: user);
+                        },
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: roleBg,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                user.roleName.isNotEmpty ? user.roleName : user.roleSlug.toUpperCase(),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () {
+                            if (isDrawer) Navigator.pop(context);
+                            AvatarEditDialog.show(context, user: user);
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: roleFg,
-                                  fontSize: 10,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: roleBg,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  user.roleName.isNotEmpty ? user.roleName : user.roleSlug.toUpperCase(),
+                                  style: TextStyle(
+                                    color: roleFg,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -748,12 +807,26 @@ class _Sidebar extends StatelessWidget {
                           ),
                           onPressed: () {
                             if (isDrawer) Navigator.pop(context);
+                            AvatarEditDialog.show(context, user: user);
+                          },
+                          child: const Text('Photo', style: TextStyle(fontSize: 11)),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            minimumSize: Size.zero,
+                          ),
+                          onPressed: () {
+                            if (isDrawer) Navigator.pop(context);
                             context.push('/change-password');
                           },
                           child: const Text('Password', style: TextStyle(fontSize: 11)),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       IconButton(
                         tooltip: 'Sign out',
                         icon: const Icon(Icons.logout, size: 18, color: AppColors.rose),

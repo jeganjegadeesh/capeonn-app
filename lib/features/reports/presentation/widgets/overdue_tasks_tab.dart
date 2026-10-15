@@ -200,9 +200,11 @@ class _OverdueTasksTabState extends ConsumerState<OverdueTasksTab> {
           color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 560;
+
+          final daysBadge = Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: AppColors.rose.withValues(alpha: isDark ? 0.25 : 0.12),
@@ -212,9 +214,9 @@ class _OverdueTasksTabState extends ConsumerState<OverdueTasksTab> {
               '+${item.daysOverdue}d',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.rose),
             ),
-          ),
-          const SizedBox(width: 12),
-          Container(
+          );
+
+          final priorityBadge = Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: priorityColor.withValues(alpha: isDark ? 0.25 : 0.12),
@@ -224,51 +226,108 @@ class _OverdueTasksTabState extends ConsumerState<OverdueTasksTab> {
               item.priority.toUpperCase(),
               style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: priorityColor),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+          );
+
+          if (isNarrow) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
+                Row(
+                  children: [
+                    daysBadge,
+                    const SizedBox(width: 8),
+                    priorityBadge,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${item.projectCode ?? 'PRJ'} · ${item.projectName ?? ''} · Assignee: ${item.assigneeName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${item.projectCode ?? 'PRJ'} · ${item.projectName ?? ''} · ${item.assigneeName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Due ${item.dueDate ?? 'N/A'} (${item.agingBucket})',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.rose),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            );
+          }
+
+          return Row(
             children: [
-              Text(
-                'Due ${item.dueDate ?? 'N/A'}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.rose),
+              daysBadge,
+              const SizedBox(width: 12),
+              priorityBadge,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${item.projectCode ?? 'PRJ'} · ${item.projectName ?? ''} · Assignee: ${item.assigneeName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                item.agingBucket,
-                style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Due ${item.dueDate ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.rose),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.agingBucket,
+                    style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                  ),
+                ],
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

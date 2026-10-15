@@ -86,11 +86,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> with SingleTickerProv
                   child: const Icon(Icons.download_rounded, color: AppColors.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Text('Export Analytics CSV', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Flexible(
+                  child: Text('Export Analytics CSV', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
-            content: SizedBox(
-              width: 400,
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
