@@ -145,7 +145,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                                               ? AppColors.primaryContainer
                                               : (!today.isApplicable
                                                   ? AppColors.primaryLight.withValues(alpha: 0.15)
-                                                  : const Color(0xFFF1F5F9))),
+                                                  : AppColors.surfaceHover)),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(
@@ -467,8 +467,8 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                 title: 'Pending Check-In',
                 value: '${s.todayAbsentCount ?? 0} Pending',
                 icon: Icons.pending_actions_outlined,
-                color: const Color(0xFF64748B),
-                bg: const Color(0xFFF1F5F9),
+                color: AppColors.textSecondary,
+                bg: AppColors.surfaceHover,
                 width: cardWidth,
               ),
             ],
@@ -500,7 +500,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
               value: '${s.daysHalfDay}',
               icon: Icons.timelapse,
               color: const Color(0xFFF97316),
-              bg: const Color(0xFFFFF7ED),
+              bg: const Color(0xFFF97316).withValues(alpha: 0.15),
               width: cardWidth,
             ),
             _MetricCard(
@@ -787,6 +787,7 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,8 +802,9 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
             // Mode Segmented Buttons
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
               ),
               padding: const EdgeInsets.all(3),
               child: Row(
@@ -813,6 +815,7 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
                       title: isDesktop ? 'All Users Live Roster' : 'Live Roster',
                       icon: Icons.group_outlined,
                       isActive: _isRosterView,
+                      isDark: isDark,
                       onTap: () => setState(() => _isRosterView = true),
                     ),
                   ),
@@ -821,6 +824,7 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
                       title: isDesktop ? 'Punch History Logs' : 'Punch Logs',
                       icon: Icons.list_alt,
                       isActive: !_isRosterView,
+                      isDark: isDark,
                       onTap: () => setState(() => _isRosterView = false),
                     ),
                   ),
@@ -932,17 +936,29 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
     required String title,
     required IconData icon,
     required bool isActive,
+    required bool isDark,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
+          color: isActive
+              ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))] : null,
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1243,16 +1259,16 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
         fg = AppColors.amber;
         break;
       case 'half_day':
-        bg = const Color(0xFFFFF7ED);
+        bg = const Color(0xFFF97316).withValues(alpha: 0.15);
         fg = const Color(0xFFF97316);
         break;
       case 'absent':
-        bg = const Color(0xFFF1F5F9);
-        fg = const Color(0xFF64748B);
+        bg = AppColors.surfaceHover;
+        fg = AppColors.textSecondary;
         label = 'NOT CLOCKED IN';
         break;
       default:
-        bg = const Color(0xFFF1F5F9);
+        bg = AppColors.surfaceHover;
         fg = AppColors.textSecondary;
     }
 
@@ -1297,7 +1313,7 @@ class _MyAttendanceList extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: r.status == 'present'
                         ? AppColors.emeraldContainer
-                        : (r.status == 'late' ? AppColors.amberContainer : const Color(0xFFFFF7ED)),
+                        : (r.status == 'late' ? AppColors.amberContainer : const Color(0xFFF97316).withValues(alpha: 0.15)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -1359,11 +1375,11 @@ class _MyAttendanceList extends ConsumerWidget {
         fg = AppColors.amber;
         break;
       case 'half_day':
-        bg = const Color(0xFFFFF7ED);
+        bg = const Color(0xFFF97316).withValues(alpha: 0.15);
         fg = const Color(0xFFF97316);
         break;
       default:
-        bg = const Color(0xFFF1F5F9);
+        bg = AppColors.surfaceHover;
         fg = AppColors.textSecondary;
     }
 
