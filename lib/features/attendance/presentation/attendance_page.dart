@@ -130,71 +130,77 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             // Current Status Info
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: today.isClockedIn
-                                        ? AppColors.emeraldContainer
-                                        : (today.isClockedOut
-                                            ? AppColors.primaryContainer
-                                            : (!today.isApplicable
-                                                ? AppColors.primaryLight.withValues(alpha: 0.15)
-                                                : const Color(0xFFF1F5F9))),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    today.isClockedIn
-                                        ? Icons.timer
-                                        : (today.isClockedOut
-                                            ? Icons.check_circle_outline
-                                            : (!today.isApplicable
-                                                ? Icons.admin_panel_settings_outlined
-                                                : Icons.access_time)),
-                                    color: today.isClockedIn
-                                        ? AppColors.emerald
-                                        : (today.isClockedOut
-                                            ? AppColors.primary
-                                            : (!today.isApplicable
-                                                ? AppColors.primary
-                                                : AppColors.textSecondary)),
-                                    size: 26,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      today.isClockedIn
-                                          ? 'Currently Clocked In'
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: isDesktop ? 520 : double.infinity),
+                              child: Row(
+                                mainAxisSize: isDesktop ? MainAxisSize.min : MainAxisSize.max,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: today.isClockedIn
+                                          ? AppColors.emeraldContainer
                                           : (today.isClockedOut
-                                              ? 'Clocked Out for Today'
+                                              ? AppColors.primaryContainer
                                               : (!today.isApplicable
-                                                  ? 'Administrator Attendance Center'
-                                                  : 'Not Clocked In Yet')),
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                                  ? AppColors.primaryLight.withValues(alpha: 0.15)
+                                                  : const Color(0xFFF1F5F9))),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    const SizedBox(height: 2),
-                                    if (!today.isApplicable)
-                                      Text(
-                                        'All clock-in eligible users monitored. Personal check-in is exempt for this account.',
-                                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                      )
-                                    else if (today.attendance?.clockInAt != null)
-                                      Text(
-                                        'In: ${today.attendance!.clockInAt!.substring(11, 16)}'
-                                        '${today.attendance?.clockOutAt != null ? " • Out: ${today.attendance!.clockOutAt!.substring(11, 16)}" : ""}',
-                                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                      )
-                                    else
-                                      Text('Today: ${today.date}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  ],
-                                ),
-                              ],
+                                    child: Icon(
+                                      today.isClockedIn
+                                          ? Icons.timer
+                                          : (today.isClockedOut
+                                              ? Icons.check_circle_outline
+                                              : (!today.isApplicable
+                                                  ? Icons.admin_panel_settings_outlined
+                                                  : Icons.access_time)),
+                                      color: today.isClockedIn
+                                          ? AppColors.emerald
+                                          : (today.isClockedOut
+                                              ? AppColors.primary
+                                              : (!today.isApplicable
+                                                  ? AppColors.primary
+                                                  : AppColors.textSecondary)),
+                                      size: 26,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          today.isClockedIn
+                                              ? 'Currently Clocked In'
+                                              : (today.isClockedOut
+                                                  ? 'Clocked Out for Today'
+                                                  : (!today.isApplicable
+                                                      ? 'Administrator Attendance Center'
+                                                      : 'Not Clocked In Yet')),
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        if (!today.isApplicable)
+                                          Text(
+                                            'All clock-in eligible users monitored. Personal check-in is exempt for this account.',
+                                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                          )
+                                        else if (today.attendance?.clockInAt != null)
+                                          Text(
+                                            'In: ${today.attendance!.clockInAt!.substring(11, 16)}'
+                                            '${today.attendance?.clockOutAt != null ? " • Out: ${today.attendance!.clockOutAt!.substring(11, 16)}" : ""}',
+                                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                          )
+                                        else
+                                          Text('Today: ${today.date}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
 
                             // Live Timer Display (for employees)
@@ -228,6 +234,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 if (!today.isApplicable) ...[
                                   Container(
@@ -242,9 +249,12 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
                                       children: [
                                         const Icon(Icons.people_alt, size: 16, color: AppColors.emerald),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          'All Clock-In Users Monitored',
-                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.emerald),
+                                        Flexible(
+                                          child: Text(
+                                            'All Clock-In Users Monitored',
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.emerald),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -513,21 +523,23 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm Clock-In'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Your check-in time and office GPS coordinates will be verified.'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: noteController,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                hintText: 'e.g., Working from Bangalore office',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Your check-in time and office GPS coordinates will be verified.'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (optional)',
+                  hintText: 'e.g., Working from Bangalore office',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -607,36 +619,38 @@ class _AttendancePageState extends ConsumerState<AttendancePage> with SingleTick
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Request Regularization'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: dateController,
-                decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: inTimeController,
-                decoration: const InputDecoration(labelText: 'Clock-In Time (HH:MM)', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: outTimeController,
-                decoration: const InputDecoration(labelText: 'Clock-Out Time (HH:MM)', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: reasonController,
-                maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Reason for Adjustment', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Please enter a valid reason' : null,
-              ),
-            ],
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: dateController,
+                  decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: inTimeController,
+                  decoration: const InputDecoration(labelText: 'Clock-In Time (HH:MM)', border: OutlineInputBorder()),
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: outTimeController,
+                  decoration: const InputDecoration(labelText: 'Clock-Out Time (HH:MM)', border: OutlineInputBorder()),
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: reasonController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'Reason for Adjustment', border: OutlineInputBorder()),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter a valid reason' : null,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -772,6 +786,8 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -792,59 +808,72 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _modeButton(
-                    title: 'All Users Live Roster',
-                    icon: Icons.group_outlined,
-                    isActive: _isRosterView,
-                    onTap: () => setState(() => _isRosterView = true),
+                  Flexible(
+                    child: _modeButton(
+                      title: isDesktop ? 'All Users Live Roster' : 'Live Roster',
+                      icon: Icons.group_outlined,
+                      isActive: _isRosterView,
+                      onTap: () => setState(() => _isRosterView = true),
+                    ),
                   ),
-                  _modeButton(
-                    title: 'Punch History Logs',
-                    icon: Icons.list_alt,
-                    isActive: !_isRosterView,
-                    onTap: () => setState(() => _isRosterView = false),
+                  Flexible(
+                    child: _modeButton(
+                      title: isDesktop ? 'Punch History Logs' : 'Punch Logs',
+                      icon: Icons.list_alt,
+                      isActive: !_isRosterView,
+                      onTap: () => setState(() => _isRosterView = false),
+                    ),
                   ),
                 ],
               ),
             ),
 
             // Date Navigation Controls
-            Row(
-              mainAxisSize: MainAxisSize.min,
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                IconButton(
-                  tooltip: 'Previous Day',
-                  icon: const Icon(Icons.chevron_left, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  onPressed: () => _changeDate(-1),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Previous Day',
+                      icon: const Icon(Icons.chevron_left, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: () => _changeDate(-1),
+                    ),
+                    Flexible(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(Icons.calendar_today, size: 14),
+                        label: Text(
+                          _isToday ? 'Today ($_dateStr)' : _dateStr,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onPressed: () => _pickDate(context),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Next Day',
+                      icon: const Icon(Icons.chevron_right, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: () => _changeDate(1),
+                    ),
+                  ],
                 ),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.calendar_today, size: 14),
-                  label: Text(
-                    _isToday ? 'Today ($_dateStr)' : _dateStr,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  onPressed: () => _pickDate(context),
-                ),
-                IconButton(
-                  tooltip: 'Next Day',
-                  icon: const Icon(Icons.chevron_right, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  onPressed: () => _changeDate(1),
-                ),
-                if (!_isToday) ...[
-                  const SizedBox(width: 4),
+                if (!_isToday)
                   TextButton(
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
                     onPressed: () => setState(() => _selectedDate = DateTime.now()),
                     child: const Text('Today', style: TextStyle(fontSize: 12)),
                   ),
-                ],
               ],
             ),
           ],
@@ -857,17 +886,22 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            SizedBox(
-              width: 260,
-              height: 38,
-              child: TextField(
-                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                decoration: InputDecoration(
-                  hintText: 'Search employee by name/code...',
-                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 260 : double.infinity,
+                minWidth: 200,
+              ),
+              child: SizedBox(
+                height: 38,
+                child: TextField(
+                  onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                  decoration: InputDecoration(
+                    hintText: 'Search employee by name/code...',
+                    hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ),
             ),
@@ -915,12 +949,16 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
           children: [
             Icon(icon, size: 15, color: isActive ? AppColors.primary : AppColors.textSecondary),
             const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+            Flexible(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -1137,6 +1175,7 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
                 side: BorderSide(color: AppColors.border),
               ),
               child: ListTile(
+                isThreeLine: true,
                 leading: UserAvatar(
                   name: r.userName ?? 'Employee',
                   avatarUrl: r.avatarUrl,
@@ -1159,6 +1198,7 @@ class _AllUsersAttendanceTabState extends ConsumerState<_AllUsersAttendanceTab> 
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 trailing: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -1250,6 +1290,7 @@ class _MyAttendanceList extends ConsumerWidget {
                 side: BorderSide(color: AppColors.border),
               ),
               child: ListTile(
+                isThreeLine: true,
                 leading: Container(
                   width: 40,
                   height: 40,
@@ -1485,6 +1526,7 @@ class _GeofenceLocationsTab extends StatelessWidget {
             side: BorderSide(color: AppColors.border),
           ),
           child: ListTile(
+            isThreeLine: loc.address != null,
             leading: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -1496,6 +1538,7 @@ class _GeofenceLocationsTab extends StatelessWidget {
             title: Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (loc.address != null) Text(loc.address!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 Text(
